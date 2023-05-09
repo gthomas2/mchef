@@ -1,0 +1,1 @@
+This folder will be empty besides this file, until you run php mchef.php --installexec

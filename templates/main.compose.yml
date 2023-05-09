@@ -1,0 +1,60 @@
+---
+version: '3.8'
+
+x-db-user: &db-user
+  "{{ dbUser ?? 'moodle'}}"
+x-db-pass: &db-pass
+  "{{ dbPassword ?? 'm@0dl3ing' }}"
+x-db-name: &db-name
+  "moodle"
+x-db-container-name: &db-container-name
+  "{{ dbContainerName ?? 'mr-db' }}"
+x-moodle-container-name: &moodle-container-name
+  "{{ moodleContainerName ?? 'mr-moodle' }}"
+
+services:
+  moodle:
+    container_name: *moodle-container-name
+    build:
+      context: ..
+      dockerfile: {{ dockerFile }}
+    environment:
+      DB_USER: *db-user
+      DB_PASS: *db-pass
+      DB_NAME: *db-name
+      DB_TYPE: {{ dbType ?? 'pgsql' }}
+      DB_HOST: *db-container-name
+    ports:
+      - {{port}}:{{port}}
+    extra_hosts:
+      - "{{host}}:127.0.0.1"
+    volumes:
+      - "moodledata:/var/www/moodledata"
+{% for volume in volumes %}
+      - "{{ volume.hostPath }}:/var/www/html/moodle{{ volume.path }}"
+{% endfor %}
+  db:
+    container_name: *db-container-name
+
+{% if (dbType ?? 'pgsql') == 'pgsql' %}
+    image: postgres:{{ dbVersion ?? 13 }}
+    environment:
+      POSTGRES_USER: *db-user
+      POSTGRES_PASSWORD: *db-pass
+      POSTGRES_DB: *db-name
+
+{% elseif dbType == 'mysql' %}
+    image: mysql:{{ dbVersion ?? 8 }}
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_bin
+      --skip-log-bin
+    environment:
+      MYSQL_USER: *db-user
+      MYSQL_ROOT_PASSWORD: *db-pass
+      MYSQL_PASSWORD: *db-pass
+      MYSQL_DATABASE: *db-name
+{% endif %}
+
+volumes:
+  moodledata:
