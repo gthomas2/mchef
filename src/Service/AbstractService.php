@@ -2,33 +2,11 @@
 
 namespace App\Service;
 
-use splitbrain\phpcli\CLI;
+use App\Interfaces\SingletonInterface;
+use App\Traits\SingletonTrait;
 
-class AbstractService {
-    /**
-     * @var CLI
-     */
-    protected $cli;
+class AbstractService implements SingletonInterface {
 
-    protected function __construct() {
-        // Singleton.
-    }
+    use SingletonTrait;
 
-    public function set_cli(CLI $cli) {
-        $this->cli = $cli;
-    }
-
-    protected static function get_instance(?CLI $cli = null): AbstractService {
-        static $instances = [];
-        $class = get_called_class();
-        if (!empty($instances[$class])) {
-            return $instances[$class];
-        }
-        $instance = new $class();
-        $instances[$class] = $instance;
-        if ($instance && $cli) {
-            $instance->set_cli($cli);
-        }
-        return $instance;
-    }
 }

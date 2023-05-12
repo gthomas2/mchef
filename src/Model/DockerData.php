@@ -3,13 +3,12 @@
 namespace App\Model;
 
 class DockerData extends Recipe {
-    /**
-     * @var array
-     */
-    public $volumes;
+    public function __construct(
+        public array $volumes,
+        public ?string $dockerFile = null,
 
-    /**
-     * @var string
-     */
-    public $dockerFile;
+        ...$args,
+    ) {
+        parent::__construct(...$args);
+    }
 }

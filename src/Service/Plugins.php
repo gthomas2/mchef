@@ -2,6 +2,8 @@
 
 namespace App\Service;
 
+use App\Model\Plugin;
+use App\Model\PluginsInfo;
 use App\Model\Recipe;
 use App\Model\Volume;
 use splitbrain\phpcli\CLI;
@@ -9,10 +11,10 @@ use splitbrain\phpcli\Exception;
 
 class Plugins extends AbstractService {
     final public static function instance(CLI $cli): Plugins {
-        return self::get_instance($cli);
+        return self::setup_instance($cli);
     }
 
-    private function get_moodle_plugin_path($pluginName): string {
+    private function getMoodlePluginPath($pluginName): string {
         $path = '';
         $parts = explode('_', $pluginName);
         $type = array_shift($parts);
@@ -196,7 +198,7 @@ class Plugins extends AbstractService {
         return $path;
     }
 
-    private function clone_github_repository($url, $path) {
+    private function cloneGithubRepository($url, $path) {
         $cmd = "git clone $url $path";
         exec($cmd, $output, $returnVar);
 
@@ -205,23 +207,24 @@ class Plugins extends AbstractService {
         }
     }
 
-    public function process_plugins(Recipe $recipe): array {
-        $returnVols = [];
+    public function getPluginsInfoFromRecipe(Recipe $recipe): ?PluginsInfo {
         if (empty($recipe->plugins)) {
-            return $returnVols;
+            return null;
         }
+        $volumes = [];
+        $plugins = [];
         foreach ($recipe->plugins as $plugin) {
             if (strpos($plugin, 'https://github.com') === 0) {
                 if ($recipe->cloneRepoPlugins) {
                     $tmpDir = sys_get_temp_dir().'/'.uniqid('', true);
 
-                    $this->clone_github_repository($plugin, $tmpDir);
-                    $versionFiles = $this->find_moodle_version_files($tmpDir);
+                    $this->cloneGithubRepository($plugin, $tmpDir);
+                    $versionFiles = $this->findMoodleVersionFiles($tmpDir);
                     if (count($versionFiles) === 1) {
                         // Repository is a single plugin.
                         if (file_exists($tmpDir.'/version.php')) {
-                            $pluginName = $this->get_plugin_name_from_version_file($tmpDir.'/version.php');
-                            $pluginPath = $this->get_moodle_plugin_path($pluginName);
+                            $pluginName = $this->getPluginComponentFromVersionFile($tmpDir.'/version.php');
+                            $pluginPath = $this->getMoodlePluginPath($pluginName);
                             $targetPath = str_replace('//', '/', getcwd().'/'.$pluginPath);
                             if (!file_exists($targetPath.'/version.php')) {
                                 $this->cli->info('Moving plugin from temp folder to ' . $targetPath);
@@ -234,7 +237,9 @@ class Plugins extends AbstractService {
                                 // Plugin already present locally.
                                 File::instance()->delete_dir($tmpDir);
                             }
-                            $returnVols[] = new Volume(['path' => $pluginPath, 'hostPath' => $targetPath]);
+                            $volume = new Volume(...['path' => $pluginPath, 'hostPath' => $targetPath]);
+                            $volumes[] = $volume;
+                            $plugins[$pluginName] = new Plugin($pluginName, $pluginPath, $targetPath, $volume);
                         }
                     } else {
                         // TODO - support plugins already in a structure.
@@ -243,10 +248,10 @@ class Plugins extends AbstractService {
                 }
             }
         }
-        return $returnVols;
+        return new PluginsInfo($volumes, $plugins);
     }
 
-    public function get_plugin_name_from_version_file($filepath): string {
+    public function getPluginComponentFromVersionFile($filepath): string {
         // Read the contents of the version.php file
         $contents = file_get_contents($filepath);
 
@@ -261,7 +266,7 @@ class Plugins extends AbstractService {
         return $pluginName;
     }
 
-    public function find_moodle_version_files($dir) {
+    public function findMoodleVersionFiles($dir) {
         $versionFiles = array();
 
         $dirIterator = new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS);
@@ -278,5 +283,45 @@ class Plugins extends AbstractService {
         }
 
         return $versionFiles;
+    }
+    
+    public function getPluginByComponentName(string $pluginName, PluginsInfo $pluginsInfo): ?Plugin {
+        $plugins = array_filter($pluginsInfo->plugins, function(Plugin $plugin) use ($pluginName) {
+            return $pluginName === $plugin->component;
+        });
+        if (count($plugins) === 1) {
+            return reset($plugins);
+        } else if (count($plugins) > 1) {
+            throw new Exception('Found more than one plugin entry for component "'.$pluginName.'" this should not happen');
+        }
+        return null;
+    }
+
+    /**
+     * Validate plugin component names.
+     * @param string[] $pluginComponents
+     * @param PluginsInfo $pluginsInfo
+     */
+    public function validatePluginComponentNames(array $pluginComponents, PluginsInfo $pluginsInfo) {
+        foreach ($pluginComponents as $pluginName) {
+            $plugin = $this->getPluginByComponentName($pluginName, $pluginsInfo);
+            if (!$plugin) {
+                throw new Exception('Invalid plugin component name '.$pluginName);
+            }
+        }
+    }
+
+    /**
+     * Get plugins by component names.
+     * @param string[] $pluginComponents
+     * @return Plugin[]
+     */
+    public function getPluginsByComponentNames(array $pluginComponents, PluginsInfo $pluginsInfo): array {
+        $plugins = [];
+        foreach ($pluginComponents as $pluginName) {
+            $plugin = $this->getPluginByComponentName($pluginName, $pluginsInfo);
+            $plugins[$pluginName] = $pluginName;
+        }
+        return $plugin;
     }
 }

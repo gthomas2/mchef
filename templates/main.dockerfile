@@ -9,15 +9,21 @@ ARG FILE_GROUP="$FILE_USER"
 ARG MAX_UPLOAD_FILESIZE={{ maxUploadSize ?? '128M' }}
 ARG MAX_EXECUTION_TIME={{ maxExecTime ?? 30 }}
 ENV DEBUG={{ debug ?? false }}
-ENV PORT={{ port ?? '8080'}}
+ENV HOST="{{ host }}"
+ENV WWWROOT="{{ wwwRoot }}"
+ENV PORT={{ port }}
+ENV MOODLE_PATH='/var/www/html/moodle'
 ENV MOODLE_TAG={{ moodleTag ?? '4.0.1' }}
 ENV MOODLE_DATA={{ moodleData ?? '/var/www/moodledata' }}
-ENV BEHAT_PORT={{ behatPort ?? $PORT}};
-ENV BEHAT_DATA="$MOODLE_DATA/behatdata";
-ENV BEHAT_HOST="";
-ENV WWW_ROOT='/var/www/html/moodle'
+{% if (includeBehat) %}
+ENV BEHAT_DATA="$MOODLE_DATA/behatdata"
+ENV BEHAT_HOST="{{ behatHost }}"
+ENV BEHAT_WWWROOT="{{ behatWwwRoot }}"
+{% endif %}
 
-WORKDIR $WWW_ROOT
+{%if (developer) %}
+RUN apt update && apt install --no-install-recommends -y vim iputils-ping postgresql-client
+{% endif %}
 
 RUN \
     mkdir -p $MOODLE_DATA  && \
@@ -27,11 +33,14 @@ RUN \
 RUN \
     { \
         echo "<VirtualHost *:$PORT>"; \
-        echo "	DocumentRoot $WWW_ROOT"; \
+{% if (host) %}
+        echo "  ServerName $HOST"; \
+{% endif %}
+        echo "	DocumentRoot $MOODLE_PATH"; \
         echo "  ErrorLog \${APACHE_LOG_DIR}/error.log"; \
         echo "  CustomLog \${APACHE_LOG_DIR}/access.log combined"; \
         echo "	# Prevent access to vendor directory."; \
-        echo "	<Directory $WWW_ROOT/vendor>"; \
+        echo "	<Directory $MOODLE_PATH/vendor>"; \
         echo "		Require all denied"; \
         echo "	</Directory>"; \
         echo "</VirtualHost>"; \
@@ -42,15 +51,15 @@ RUN apachectl -t
 {% if (includeBehat) %}
 RUN \
 	{ \
-		echo "<VirtualHost *:$BEHAT_PORT>"; \
+		echo "<VirtualHost *:$PORT>"; \
 		echo "  ServerName $BEHAT_HOST"; \
-		echo "	DocumentRoot $WWW_ROOT"; \
+		echo "	DocumentRoot $MOODLE_PATH"; \
         echo "	# Prevent access to vendor directory."; \
-		echo "	<Directory $MOODLE_VENDOR>"; \
+		echo "	<Directory $MOODLE_PATH/vendor>"; \
 		echo "		Require all denied"; \
 		echo "	</Directory>"; \
 		echo "	ErrorLog \${APACHE_LOG_DIR}/behat_error.log"; \
-		echo "	CustomLog \${APACHE_LOG_DIR}/behat_access.log"; \
+		echo "	CustomLog \${APACHE_LOG_DIR}/behat_access.log combined"; \
 		echo "</VirtualHost>"; \
 	} > /etc/apache2/sites-enabled/cfz-behat.conf
 {% endif %}
@@ -64,11 +73,18 @@ RUN \
 	sed -i "s/upload_max_filesize = .*/upload_max_filesize = $MAX_UPLOAD_FILESIZE/" /usr/local/etc/php/php.ini
 
 # Install Moodle.
-RUN git clone https://github.com/moodle/moodle.git --branch $MOODLE_TAG --depth 1 $WWW_ROOT
+RUN git clone https://github.com/moodle/moodle.git --branch $MOODLE_TAG --depth 1 $MOODLE_PATH
+COPY assets/config.php $MOODLE_PATH/config.php
+
+{% if (includeBehat) %}
+# Install behat config helper.
+RUN git clone https://github.com/andrewnicols/moodle-browser-config.git --branch main --depth 1 $MOODLE_PATH/moodle-browser-config
+COPY assets/moodle-browser-config/config.php $MOODLE_PATH/moodle-browser-config/config.php
+{% endif %}
 
 VOLUME $MOODLE_DATA
 {% for volume in volumes %}
-VOLUME $WWW_ROOT{{ volume.path }}
+VOLUME $MOODLE_PATH{{ volume.path }}
 {% endfor %}
 
 # Create behat data dir.

@@ -19,7 +19,7 @@ if ($CFG->dbtype === 'mysqli') {
     ];
 }
 
-$CFG->wwwroot   = getenv('WWW_ROOT');
+$CFG->wwwroot   = getenv('WWWROOT');
 $CFG->dataroot  = getenv('MOODLE_DATA');
 $CFG->admin     = 'admin';
 
@@ -39,6 +39,15 @@ if ($debug) {
     $CFG->debug = (E_ALL | E_STRICT);
     $CFG->debugdisplay = 1;
 }
+
+{% if (includeBehat) %}
+
+$CFG->behat_dataroot = getenv('BEHAT_DATA');
+$CFG->behat_wwwroot = getenv('BEHAT_WWWROOT');
+$CFG->behat_prefix = 'beh_';
+
+require_once('moodle-browser-config/init.php');
+{% endif %}
 
 require_once(__DIR__ . '/lib/setup.php');
 

@@ -3,13 +3,15 @@
 namespace App\Model;
 
 class Volume extends AbstractModel {
-    /**
-     * @var string - relative path
-     */
-    public $path;
+    public function __construct(
+        /**
+         * @var string - relative path
+         */
+        public string $path,
 
-    /**
-     * @var string - absolute path on host
-     */
-    public $hostPath;
+        /**
+         * @var string - absolute path on host
+         */
+        public string $hostPath,
+    ) {}
 }

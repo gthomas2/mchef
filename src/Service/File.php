@@ -6,7 +6,7 @@ use splitbrain\phpcli\Exception;
 
 class File extends AbstractService {
     final public static function instance(): File {
-        return self::get_instance();
+        return self::setup_instance();
     }
 
     public function copy_files($src, $target) {

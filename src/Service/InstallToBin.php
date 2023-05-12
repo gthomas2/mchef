@@ -8,7 +8,7 @@ use splitbrain\phpcli\CLI;
 class InstallToBin extends AbstractService {
 
     final public static function instance(CLI $cli): InstallToBin {
-        return self::get_instance($cli);
+        return self::setup_instance($cli);
     }
 
     protected function get_php_executable_path() {
@@ -59,7 +59,11 @@ class InstallToBin extends AbstractService {
         chmod($installFilePath, 0750);
         $binFilePath = $binDir.'/mchef.php';
         if (file_exists($binFilePath)) {
-            throw new Exception('Unable to install to bin dir as it already exists there - '.$binDir.'/mchef.php');
+            try {
+                unlink($binFilePath);
+            } catch (\Exception $e) {
+                throw new Exception('Unable to install to bin dir as it already exists there - ' . $binDir . '/mchef.php');
+            }
         }
         symlink($installFilePath, $binDir.'/mchef.php');
 

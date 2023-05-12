@@ -3,24 +3,237 @@
 namespace App\Service;
 
 use App\Model\DockerData;
+use App\Model\PluginsInfo;
+use App\Model\Recipe;
+use App\Traits\ExecTrait;
 use splitbrain\phpcli\CLI;
 use splitbrain\phpcli\Exception;
 
 class Main extends AbstractService {
 
+    use ExecTrait;
+
+    /**
+     * @var Recipe
+     */
+    private $recipe;
+
+    /**
+     * @var Plugins plugins service
+     */
+    private $pluginsService;
+
+    /**
+     * @var PluginsInfo
+     */
+    private PluginsInfo $pluginInfo;
+
+    /**
+     * @var \Twig\Environment
+     */
+    private \Twig\Environment $twig;
+
+    protected function __construct() {
+        $loader = new \Twig\Loader\FilesystemLoader(__DIR__.'/../../templates');
+        $loader->addPath(__DIR__.'/../../templates/moodle-browser', 'browser');
+        $this->twig = new \Twig\Environment($loader);
+    }
+
     final public static function instance(CLI $cli): Main {
-        return self::get_instance($cli);
+        return self::setup_instance($cli);
+    }
+
+    public function getChefPath() {
+        return getcwd().'/.mchef';
+    }
+
+    public function getDockerPath() {
+        return $this->getChefPath().'/docker';
+    }
+
+    public function getAssetsPath() {
+        return $this->getDockerPath().'/assets';
     }
 
     private function startDocker($ymlPath) {
         $this->cli->notice('Starting docker containers');
-        $cmd = "docker-compose -f $ymlPath up --force-recreate --build";
-        die ($cmd);
+        // @Todo - force-recreate and --build need to be flags that get passed in, not hard coded.
+        $cmd = "docker-compose -f $ymlPath up -d --force-recreate --build";
+        $this->exec($cmd, "Error starting docker containers");
+
+        // @Todo - Add code here to check docker ps for expected running containers.
+        // For example, if one of the Apache virtual hosts has an error in it, it will bomb out.
+        // So we need to spin here for about 10 seconds checking that the containers are running.
+
+        $this->cli->success('Docker containers have successfully been started');
+    }
+
+    public function startContainers(): void {
+        $this->cli->notice('Starting containers');
+        $dockerService = Docker::instance($this->cli);
+        $recipe = $this->getRecipe();
+        $moodleContainer = $recipe->containerPrefix.'-moodle';
+        $dockerService->startDockerContainer($moodleContainer);
+        $dbContainer = $recipe->containerPrefix.'-db';
+        $dockerService->startDockerContainer($dbContainer);
+
+
+        $this->cli->success('All containers have been started');
+    }
+
+    public function stopContainers(): void {
+        $this->cli->notice('Stopping containers');
+        $recipe = $this->getRecipe();
+        $moodleContainer = $recipe->containerPrefix.'-moodle';
+        $dbContainer = $recipe->containerPrefix.'-db';
+        $behatContainer = $recipe->containerPrefix.'-behat';
+        $toStop = [
+            $moodleContainer,
+            $dbContainer
+        ];
+
+        $dockerService = Docker::instance($this->cli);
+        $containers = $dockerService->getDockerContainers(false);
+        foreach ($containers as $container) {
+            $name = $container->names;
+            $this->cli->notice('Stopping container: '.$name);
+            if (in_array($name, $toStop) || strpos($behatContainer, $name) === 0) {
+                $dockerService->stopDockerContainer($name);
+            }
+        }
+
+        $this->cli->success('All containers have been stopped');
+    }
+
+    private function configureDockerNetwork(Recipe $recipe): void {
+        $dockerService = Docker::instance($this->cli);
+        $networkName = $recipe->containerPrefix.'-network';
+
+        if ($dockerService->networkExists($networkName)) {
+            $this->cli->info('Skipping creating network as it exists: '.$networkName);
+        } else {
+            $this->cli->info('Configuring network ' . $networkName);
+            $cmd = "docker network create $networkName";
+            $this->exec($cmd, "Error creating network $networkName");
+        }
+
+        $dbContainer = $recipe->containerPrefix.'-db';
+        $moodleContainer = $recipe->containerPrefix.'-moodle';
+
+        $cmd = "docker network connect $networkName $dbContainer";
+        $this->exec($cmd, "Failed to connect $dbContainer to $networkName");
+
+        if ($recipe->host && $recipe->host !== 'localhost') {
+            // Note - the alias is essential here for behat tests to work.
+            // The behat docker container needs to understand the host name when chrome driver tries
+            // to operate on the host.
+            $cmd = "docker network connect $networkName $moodleContainer --alias $recipe->host --alias $recipe->behatHost";
+        } else {
+            $cmd = "docker network connect $networkName $moodleContainer";
+        }
+
+        $this->exec($cmd, "Failed to connect $moodleContainer to $networkName");
+
+        $this->cli->success('Network configuration successful');
+    }
+
+    private function updateHostHosts(Recipe $recipe): void {
+        if ($recipe->updateHostHosts) {
+            try {
+                $hosts = file('/etc/hosts');
+            } catch (\Exception $e) {
+                $this->cli->error('Failed to update host hosts file');
+            }
+        }
+        $toAdd = [];
+        if (!empty($recipe->host)) {
+            $toAdd[] = $recipe->host;
+        }
+        if (!empty($recipe->behatHost)) {
+            $toAdd[] = $recipe->behatHost;
+        }
+        $toAdd = array_filter($toAdd, function($new) use($hosts) {
+            foreach ($hosts as $existing) {
+                if (strpos($existing, $new) !== false && strpos($existing, '#') === false) {
+                    // Already exists - no need to add.
+                    return false;
+                }
+            }
+            return true;
+        });
+
+        if (empty($toAdd)) {
+            $this->cli->info('No hosts to add to host /etc/hosts file');
+            return;
+        }
+
+        $toAddLines = [];
+        foreach ($toAdd as $newHost) {
+            $newHost = "\n".'127.0.0.1       '.$newHost;
+            $toAddLines[] = $newHost;
+        }
+
+        array_unshift($toAddLines, "\n# Hosts added by mchef");
+        array_push($toAddLines, "\n# End hosts added by mchef");
+
+        $hosts = array_merge($hosts, $toAddLines);
+        $hostsContent = implode("", $hosts);
+        $tmpHostsFile = tempnam(sys_get_temp_dir(), "etc_hosts");
+        file_put_contents($tmpHostsFile, $hostsContent);
+
+        $this->cli->notice('Updating /etc/hosts - may need root password.');
+        $cmd = "sudo cp -f $tmpHostsFile /etc/hosts";
         exec($cmd, $output, $returnVar);
 
         if ($returnVar != 0) {
-            throw new Exception("Error starting docker containers: " . implode("\n", $output));
+            throw new Exception("Error updating /etc/hosts file");
         }
+
+        $hostsContent = file_get_contents('/etc/hosts');
+        foreach ($toAdd as $toCheck) {
+            if (stripos($hostsContent, $toCheck) === false) {
+                throw new Exception('Failed to update /etc/hosts');
+            }
+        }
+
+        $this->cli->success('Successfully updated /etc/hosts');
+    }
+
+    private function parseRecipe(string $recipeFilePath): Recipe {
+        $parser = (RecipeParser::instance());
+        $recipe = $parser->parse($recipeFilePath);
+        $this->cli->success('Recipe successfully parsed.');
+        return $recipe;
+    }
+
+    private function populateAssets(Recipe $recipe) {
+        $assetsPath = $this->getAssetsPath();
+        if (!file_exists($assetsPath)) {
+            $this->cli->info('Creating docker assets path '.$assetsPath);
+            mkdir($assetsPath, 0755, true);
+        }
+
+        // Create moodle config asset.
+        try {
+            $moodleConfigContents = $this->twig->render('config.php', (array) $recipe);
+        } catch (\Exception $e) {
+            throw new Exception('Failed to parse config.php template: '.$e->getMessage());
+        }
+        file_put_contents($assetsPath.'/config.php', $moodleConfigContents);
+
+        if ($recipe->includeBehat) {
+            try {
+                // Create moodle-browser-config config.
+                $browserConfigContents = $this->twig->render('@browser/config.php', (array) $recipe);
+            } catch (\Exception $e) {
+                throw new Exception('Failed to parse moodle-browser config.php template: '.$e->getMessage());
+            }
+        }
+        $browserConfigAssetsPath = $assetsPath.'/moodle-browser-config';
+        if (!file_exists($browserConfigAssetsPath)) {
+            mkdir($browserConfigAssetsPath, 0755, true);
+        }
+        file_put_contents($browserConfigAssetsPath.'/config.php', $browserConfigContents);
     }
 
     public function create(string $recipeFilePath) {
@@ -32,34 +245,65 @@ class Main extends AbstractService {
                 "\nAt that point you should be able to call mchef.php without prefixing with the php command."
             );
         }
-        $parser = (RecipeParser::instance());
-        $recipe = $parser->parse($recipeFilePath);
-        $this->cli->success('Recipe successfully parsed.');
+        $recipe = $this->parseRecipe($recipeFilePath);
 
-        $volumes = (Plugins::instance($this->cli))->process_plugins($recipe);
+        $this->pluginInfo = (Plugins::instance($this->cli))->getPluginsInfoFromRecipe($recipe);
+        $volumes = $this->pluginInfo ? $this->pluginInfo->volumes : null;
         if ($volumes) {
             $this->cli->info('Volumes will be created for plugins: '.implode("\n", array_map(function($vol) {return $vol->path;}, $volumes)));
         }
-
-        $dockerData = new DockerData($recipe);
+        $dockerData = new DockerData($volumes, null, ...(array) $recipe);
         $dockerData->volumes = $volumes;
 
-        $loader = new \Twig\Loader\FilesystemLoader(__DIR__.'/../../templates');
-        $twig = new \Twig\Environment($loader);
-        $dockerFileContents = $twig->render('main.dockerfile', (array) $dockerData);
+        $this->updateHostHosts($recipe);
 
-        $recipePath = getcwd().'/.mchef/docker';
-        if (!file_exists($recipePath)) {
-            mkdir($recipePath, 0755, true);
+        try {
+            $dockerFileContents = $this->twig->render('main.dockerfile', (array) $dockerData);
+        } catch (\Exception $e) {
+            throw new Exception('Failed to parse main.dockerfile template: '.$e->getMessage());
         }
 
-        $dockerData->dockerFile = $recipePath.'/Dockerfile';
+        // Copy docker files and recipe files over to .mchef hidden directory.
+        $chefPath = $this->getChefPath();
+        $dockerPath =$this->getDockerPath();
+        if (!file_exists($dockerPath)) {
+            mkdir($dockerPath, 0755, true);
+        }
+
+        copy($recipeFilePath, $chefPath.'/recipe.json');
+
+        $dockerData->dockerFile = $dockerPath.'/Dockerfile';
         file_put_contents($dockerData->dockerFile, $dockerFileContents);
 
-        $dockerComposeFileContents = $twig->render('main.compose.yml', (array) $dockerData);
-        $ymlPath = $recipePath.'/main.compose.yml';
+        $dockerComposeFileContents = $this->twig->render('main.compose.yml', (array) $dockerData);
+        $ymlPath = $dockerPath.'/main.compose.yml';
         file_put_contents($ymlPath, $dockerComposeFileContents);
 
+        $this->populateAssets($recipe);
+
         $this->startDocker($ymlPath);
+
+        $this->configureDockerNetwork($recipe);
+    }
+
+    public function getRecipe(): Recipe {
+        if ($this->recipe) {
+            return $this->recipe;
+        }
+        $mchefPath = $this->getChefPath();
+        $recipeFilePath = $mchefPath.'/recipe.json';
+        if (!file_exists($recipeFilePath)) {
+            $this->cli->error('Have you run mchef.php [recipefile]? Recipe not present at '.$recipeFilePath);
+        }
+        $this->recipe = $this->parseRecipe($recipeFilePath);
+        return $this->recipe;
+    }
+    
+    public function getPluginInfo(): PluginsInfo {
+        return $this->pluginInfo;
+    }
+
+    public function getPluginService() {
+        return $this->pluginsService;
     }
 }

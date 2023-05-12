@@ -7,6 +7,6 @@
   ],
   "host": "moodle-image-opt.test",
   "port": 80,
-  "addSystemHost": true,
+  "updateHostHosts": true,
   "dbType": "pgsql"
 }

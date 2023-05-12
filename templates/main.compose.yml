@@ -8,15 +8,15 @@ x-db-pass: &db-pass
 x-db-name: &db-name
   "moodle"
 x-db-container-name: &db-container-name
-  "{{ dbContainerName ?? 'mr-db' }}"
+  "{{ containerPrefix ?? 'mc' }}-db"
 x-moodle-container-name: &moodle-container-name
-  "{{ moodleContainerName ?? 'mr-moodle' }}"
+  "{{ containerPrefix ?? 'mc' }}-moodle"
 
 services:
   moodle:
     container_name: *moodle-container-name
     build:
-      context: ..
+      context: .
       dockerfile: {{ dockerFile }}
     environment:
       DB_USER: *db-user
@@ -28,6 +28,9 @@ services:
       - {{port}}:{{port}}
     extra_hosts:
       - "{{host}}:127.0.0.1"
+{% if (behatHost) %}
+      - "{{behatHost}}:127.0.0.1"
+{% endif %}
     volumes:
       - "moodledata:/var/www/moodledata"
 {% for volume in volumes %}
@@ -35,7 +38,6 @@ services:
 {% endfor %}
   db:
     container_name: *db-container-name
-
 {% if (dbType ?? 'pgsql') == 'pgsql' %}
     image: postgres:{{ dbVersion ?? 13 }}
     environment:
