@@ -28,7 +28,7 @@ class Behat extends AbstractCommand {
     }
 
     private function getBehatRunCodeFromInitOutput(string $initOutput): string {
-        // First test for actual line.
+        // First, test for actual line.
         if (stripos($initOutput, 'vendor/bin/behat') === 0) {
             return explode("\n", $initOutput)[0];
         }
@@ -61,7 +61,8 @@ class Behat extends AbstractCommand {
         $docker = Docker::instance();
         $dockerPs = $docker->getDockerPs();
         $alreadyRunning = false;
-        $containerName = $recipe->containerPrefix.'-behat-'.$this->browser;
+        // Note - the mchef prefix in the container name is hardcoded because it is intended to be shared across projects.
+        $containerName = 'mchef-behat-'.$this->browser;
         foreach ($dockerPs as $container) {
             if ($container->names === $containerName) {
                 // Already running docker container for behat chrome.

@@ -248,8 +248,8 @@ class Main extends AbstractService {
         $recipe = $this->parseRecipe($recipeFilePath);
 
         if ($recipe->includeBehat) {
-            $behatDumpPath = file_exists(getcwd().'/_behat_dump');
-            if (!$behatDumpPath) {
+            $behatDumpPath = getcwd().'/_behat_dump';
+            if (!file_exists($behatDumpPath)) {
                 mkdir($behatDumpPath, 0755);
                 file_put_contents($behatDumpPath.'/.htaccess', 'Options +Indexes');
             }

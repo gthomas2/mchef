@@ -296,7 +296,12 @@ class Plugins extends AbstractService {
             }
         }
         // Cache to file.
+        $mainService = (Main::instance($this->cli));
+        $chefPath = $mainService->getChefPath();
         $pluginsInfoPath = $this->getMchefPluginsInfoPath();
+        if (!file_exists($chefPath)) {
+            mkdir($chefPath, 0755);
+        }
         $pluginsInfo = new PluginsInfo($volumes, $plugins);
         file_put_contents($pluginsInfoPath, serialize($pluginsInfo));
         return $pluginsInfo;
