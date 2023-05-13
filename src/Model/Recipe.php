@@ -119,7 +119,7 @@ class Recipe extends AbstractModel {
         /**
          * @var bool - include php unit configuration
          */
-        public bool $includePHPUnit = false,
+        public bool $includePhpUnit = false,
 
         /**
          * @var bool - include behat configuration

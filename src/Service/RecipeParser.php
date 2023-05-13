@@ -21,6 +21,9 @@ class RecipeParser extends AbstractService {
         } catch (\Exception $e) {
             throw new Exception('Failed to decode recipe JSON. Recipe: '.$filePath, 0, $e);
         }
+        if (empty($object)) {
+            throw new Exception('Failed to decode recipe JSON. Recipe: '.$filePath);
+        }
         $this->validate($object, $filePath);
 
         $recipe = new Recipe(...(array) $object);

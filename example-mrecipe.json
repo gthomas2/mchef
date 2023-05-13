@@ -3,7 +3,7 @@
   "moodleTag": "v4.1.0",
   "phpVersion": "8.0",
   "plugins": [
-    "https://github.com/gthomas2/moodle-filter_imageopt"
+    "https://github.com/gthomas2/moodle-moodle-filter_imageopt"
   ],
   "host": "moodle-image-opt.test",
   "port": 80,

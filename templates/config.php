@@ -25,7 +25,7 @@ $CFG->admin     = 'admin';
 
 $CFG->directorypermissions = 0777;
 
-{% if (includePHPUnit) %}
+{% if (includePhpUnit) %}
 $CFG->phpunit_dataroot = getenv('MOODLE_DATA').'/moodle-phpunit';
 $CFG->phpunit_prefix = 'phu_';
 {% endif %}
@@ -45,7 +45,7 @@ if ($debug) {
 $CFG->behat_dataroot = getenv('BEHAT_DATA');
 $CFG->behat_wwwroot = getenv('BEHAT_WWWROOT');
 $CFG->behat_prefix = 'beh_';
-
+$CFG->behat_faildump_path = '/var/www/html/moodle/behat_dump';
 require_once('moodle-browser-config/init.php');
 {% endif %}
 

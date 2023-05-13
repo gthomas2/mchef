@@ -33,6 +33,9 @@ services:
 {% endif %}
     volumes:
       - "moodledata:/var/www/moodledata"
+{% if includeBehat %}
+      - './_behat_dump:/var/www/html/moodle/behat_dump:delegated'
+{% endif %}
 {% for volume in volumes %}
       - "{{ volume.hostPath }}:/var/www/html/moodle{{ volume.path }}"
 {% endfor %}

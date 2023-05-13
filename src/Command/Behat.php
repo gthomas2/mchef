@@ -18,6 +18,8 @@ class Behat extends AbstractCommand {
     use SingletonTrait;
     use ExecTrait;
 
+    const COMMAND_NAME = 'behat';
+
     protected string $browser = 'chrome'; // Not configurable for now.
 
     final public static function instance(MChefCLI $cli): Behat {
@@ -25,24 +27,11 @@ class Behat extends AbstractCommand {
         return $instance;
     }
 
-    /**
-     * @param Options $options
-     * @return Plugin[]
-     */
-    private function getPluginsFromOptions(Options $options): array {
-        $recipe = (Main::instance($this->cli))->getRecipe();
-        $pluginInfo = (Plugins::instance($this->cli))->getPluginsInfoFromRecipe($recipe);
-        if ($args = $options->getArgs()) {
-            $pluginsCsv = $args[0];
-            $pluginComponentNames = array_map(trim, explode(',', $pluginsCsv));
-            $pluginService = $this->cli->main->getPluginService();
-            $pluginService->validatePluginComponentNames($pluginComponentNames, $pluginInfo);
-            return $pluginService->getPluginsByComponentNames($pluginComponentNames, $pluginInfo);
-        }
-        return $pluginInfo->plugins;
-    }
-
     private function getBehatRunCodeFromInitOutput(string $initOutput): string {
+        // First test for actual line.
+        if (stripos($initOutput, 'vendor/bin/behat') === 0) {
+            return explode("\n", $initOutput)[0];
+        }
         // Get match on success line.
         $pattern = '/Acceptance tests environment enabled on (.+), to run the tests use:/';
         $matched = preg_match($pattern, $initOutput, $matches);
@@ -63,6 +52,8 @@ class Behat extends AbstractCommand {
     }
 
     public function execute(Options $options): void {
+        $this->verbose = !empty($options->getOpt('verbose'));
+
         $recipe = (Main::instance($this->cli))->getRecipe();
         if (!$recipe->includeBehat) {
             throw new Exception('This recipe does not have includeBehat set to true, OR you need to run mchef.php [recipefile] again.');
@@ -111,14 +102,28 @@ class Behat extends AbstractCommand {
         $this->cli->notice('Initializing behat');
         $moodleContainer = $recipe->containerPrefix.'-moodle';
         $cmd = 'docker exec -it '.$moodleContainer.' php /var/www/html/moodle/admin/tool/behat/cli/init.php';
-        $output = $this->exec($cmd, 'Failed to initialize behat');
+        $output = $this->execStream($cmd, 'Failed to initialize behat');
         $behatRunCode = $this->getBehatRunCodeFromInitOutput($output);
         $behatRunCode = str_replace('vendor/bin/behat', '/var/www/html/moodle/vendor/bin/behat', $behatRunCode);
 
-        $plugins = $this->getPluginsFromOptions($options);
+        $featureFile = null;
+        if ($args = $options->getArgs()) {
+            $featureFile = $args[0];
+        }
+
+        $pluginsService = Plugins::instance($this->cli);
+        $plugins = $pluginsService->getPluginsCsvFromOptions($options);
         $tags = $options->getOpt('tags');
         $runMsg = 'Executing behat tests';
-        if (!empty($plugins)) {
+        if (!empty($featureFile)) {
+            if (!empty($plugins)) {
+                $this->cli->warning('NOTE - --plugins option is ingored when a feature file is passed');
+            }
+            $runMsg .= " for featurefile $featureFile";
+            if (!empty($tags)) {
+                $runMsg .= " and tags ".$tags;
+            }
+        } else if (!empty($plugins)) {
             $runMsg .= " for plugins ".implode(',', array_keys($plugins));
             if (!empty($tags)) {
                 $runMsg .= " and tags ".$tags;
@@ -129,8 +134,14 @@ class Behat extends AbstractCommand {
             $runMsg .= " for tags ".$tags;
         }
         $behatRunCode .= ' --profile=headlesschrome';
+        if ($this->verbose) {
+            $behatRunCode .= ' --format-settings=\'{"expand": true}\'';
+        }
         if (!empty($tags)) {
             $behatRunCode .= ' --tags='.$tags;
+        }
+        if (!empty($featureFile)) {
+            $behatRunCode .= ' '.$featureFile;
         }
         $this->cli->notice($runMsg);
         $cmd = 'docker exec -it '.$moodleContainer.' '.$behatRunCode;
@@ -138,11 +149,13 @@ class Behat extends AbstractCommand {
     }
 
     public function register(Options $options): void {
-        $options->registerCommand('behat', 'Allows behat tests to be run against plugins defined in the recipe file.');
-        $options->registerArgument('plugins',
-            'Plugin frankenstyle names to run behat tests against. Leave this argument empty for all plugins. For multiple plugins, separate using a comma.',
-            false, 'behat');
+        $options->registerCommand(self::COMMAND_NAME, 'Allows behat tests to be run against plugins defined in the recipe file.');
+        $options->registerArgument('feature', 'Specific feature file to run.', false, self::COMMAND_NAME);
+        $options->registerOption('plugins',
+            'Plugin frankenstyle names to run behat tests against. Ommit this argument for all plugins. For multiple plugins, separate using a comma.',
+            'p', false, self::COMMAND_NAME);
         $options->registerOption('tags', 'Limit your tests to features and steps containing specific tags - e.g @javascript',
-            null, false, 'behat');
+            null, false, self::COMMAND_NAME);
+        $options->registerOption('verbose', 'Output more information', 'v', false, self::COMMAND_NAME);
     }
 }

@@ -247,6 +247,14 @@ class Main extends AbstractService {
         }
         $recipe = $this->parseRecipe($recipeFilePath);
 
+        if ($recipe->includeBehat) {
+            $behatDumpPath = file_exists(getcwd().'/_behat_dump');
+            if (!$behatDumpPath) {
+                mkdir($behatDumpPath, 0755);
+                file_put_contents($behatDumpPath.'/.htaccess', 'Options +Indexes');
+            }
+        }
+
         $this->pluginInfo = (Plugins::instance($this->cli))->getPluginsInfoFromRecipe($recipe);
         $volumes = $this->pluginInfo ? $this->pluginInfo->volumes : null;
         if ($volumes) {

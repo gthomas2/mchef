@@ -8,6 +8,7 @@ use App\Model\Recipe;
 use App\Model\Volume;
 use splitbrain\phpcli\CLI;
 use splitbrain\phpcli\Exception;
+use splitbrain\phpcli\Options;
 
 class Plugins extends AbstractService {
     final public static function instance(CLI $cli): Plugins {
@@ -207,13 +208,53 @@ class Plugins extends AbstractService {
         }
     }
 
+    public function getMchefPluginsInfoPath(): string {
+        $mainService = (Main::instance($this->cli));
+        $chefPath = $mainService->getChefPath();
+        $pluginsInfoPath = $chefPath.'/pluginsinfo.object';
+        return $pluginsInfoPath;
+    }
+
+    public function loadMchefPluginsInfo(): ?PluginsInfo {
+        $pluginsInfoPath = $this->getMchefPluginsInfoPath();
+        if (file_exists($pluginsInfoPath)) {
+            try {
+                $object = unserialize(file_get_contents($pluginsInfoPath), [
+                    'allowed_classes' => [PluginsInfo::class, Plugin::class, Volume::class]]);
+            } catch (\Exception) {
+                return null;
+            }
+            if (empty($object)) {
+                return null;
+            }
+            return $object;
+        }
+        return null;
+    }
+
+    private function checkPluginsInfoInSync(Recipe $recipe, PluginsInfo $pluginsInfo) {
+        if (empty($recipe->plugins) && empty($pluginsInfo->plugins)) {
+            return true;
+        }
+        $pInfoRecipeSources = array_map(
+            function(Plugin $plugin) { return $plugin->recipeSrc; }, $pluginsInfo->plugins);
+        return empty(array_diff($pInfoRecipeSources, $recipe->plugins));
+    }
+
     public function getPluginsInfoFromRecipe(Recipe $recipe): ?PluginsInfo {
+        $mcPluginsInfo = $this->loadMchefPluginsInfo();
+        if ($mcPluginsInfo && $this->checkPluginsInfoInSync($recipe, $mcPluginsInfo)) {
+            $this->cli->info('Using cached plugins info');
+            return $mcPluginsInfo;
+        }
+
         if (empty($recipe->plugins)) {
             return null;
         }
         $volumes = [];
         $plugins = [];
         foreach ($recipe->plugins as $plugin) {
+            // Only support single github hosted plugins for now.
             if (strpos($plugin, 'https://github.com') === 0) {
                 if ($recipe->cloneRepoPlugins) {
                     $tmpDir = sys_get_temp_dir().'/'.uniqid('', true);
@@ -239,7 +280,13 @@ class Plugins extends AbstractService {
                             }
                             $volume = new Volume(...['path' => $pluginPath, 'hostPath' => $targetPath]);
                             $volumes[] = $volume;
-                            $plugins[$pluginName] = new Plugin($pluginName, $pluginPath, $targetPath, $volume);
+                            $plugins[$pluginName] = new Plugin(
+                                $pluginName,
+                                $pluginPath,
+                                $targetPath,
+                                $volume,
+                                $plugin
+                            );
                         }
                     } else {
                         // TODO - support plugins already in a structure.
@@ -248,7 +295,11 @@ class Plugins extends AbstractService {
                 }
             }
         }
-        return new PluginsInfo($volumes, $plugins);
+        // Cache to file.
+        $pluginsInfoPath = $this->getMchefPluginsInfoPath();
+        $pluginsInfo = new PluginsInfo($volumes, $plugins);
+        file_put_contents($pluginsInfoPath, serialize($pluginsInfo));
+        return $pluginsInfo;
     }
 
     public function getPluginComponentFromVersionFile($filepath): string {
@@ -264,6 +315,24 @@ class Plugins extends AbstractService {
         }
 
         return $pluginName;
+    }
+
+    /**
+     * @param Options $options
+     * @return Plugin[]
+     */
+    public function getPluginsCsvFromOptions(Options $options): array {
+        $mainService = (Main::instance($this->cli));
+        $recipe = $mainService->getRecipe();
+        $pluginInfo = $this->getPluginsInfoFromRecipe($recipe);
+        if ($args = $options->getOpt('plugin')) {
+            $pluginsCsv = $args[0];
+            $pluginComponentNames = array_map('trim', explode(',', $pluginsCsv));
+            $pluginService = (Plugins::instance($this->cli));
+            $pluginService->validatePluginComponentNames($pluginComponentNames, $pluginInfo);
+            return $pluginService->getPluginsByComponentNames($pluginComponentNames, $pluginInfo);
+        }
+        return $pluginInfo->plugins;
     }
 
     public function findMoodleVersionFiles($dir) {
@@ -320,8 +389,8 @@ class Plugins extends AbstractService {
         $plugins = [];
         foreach ($pluginComponents as $pluginName) {
             $plugin = $this->getPluginByComponentName($pluginName, $pluginsInfo);
-            $plugins[$pluginName] = $pluginName;
+            $plugins[$pluginName] = $plugin;
         }
-        return $plugin;
+        return $plugins;
     }
 }
