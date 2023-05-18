@@ -13,7 +13,7 @@ ENV HOST="{{ host }}"
 ENV WWWROOT="{{ wwwRoot }}"
 ENV PORT={{ port }}
 ENV MOODLE_PATH='/var/www/html/moodle'
-ENV MOODLE_TAG={{ moodleTag ?? '4.0.1' }}
+ENV MOODLE_TAG={{ moodleTag ?? 'v4.0.1' }}
 ENV MOODLE_DATA={{ moodleData ?? '/var/www/moodledata' }}
 {% if (includeBehat) %}
 ENV BEHAT_DATA="$MOODLE_DATA/behatdata"
@@ -73,6 +73,7 @@ RUN \
 	sed -i "s/upload_max_filesize = .*/upload_max_filesize = $MAX_UPLOAD_FILESIZE/" /usr/local/etc/php/php.ini
 
 # Install Moodle.
+RUN rm -rf $MOODLE_PATH/*
 RUN git clone https://github.com/moodle/moodle.git --branch $MOODLE_TAG --depth 1 $MOODLE_PATH
 COPY assets/config.php $MOODLE_PATH/config.php
 

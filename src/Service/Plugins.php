@@ -326,16 +326,18 @@ class Plugins extends AbstractService {
      * @param Options $options
      * @return Plugin[]
      */
-    public function getPluginsCsvFromOptions(Options $options): array {
+    public function getPluginsCsvFromOptions(Options $options): ?array {
         $mainService = (Main::instance($this->cli));
         $recipe = $mainService->getRecipe();
         $pluginInfo = $this->getPluginsInfoFromRecipe($recipe);
-        if ($args = $options->getOpt('plugin')) {
-            $pluginsCsv = $args[0];
+        $pluginsCsv = $options->getOpt('plugins');
+        if (!empty($pluginsCsv)) {
             $pluginComponentNames = array_map('trim', explode(',', $pluginsCsv));
             $pluginService = (Plugins::instance($this->cli));
             $pluginService->validatePluginComponentNames($pluginComponentNames, $pluginInfo);
             return $pluginService->getPluginsByComponentNames($pluginComponentNames, $pluginInfo);
+        } else if ($pluginsCsv === '') {
+            return null;
         }
         return $pluginInfo->plugins;
     }

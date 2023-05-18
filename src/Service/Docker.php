@@ -148,4 +148,10 @@ class Docker extends AbstractService {
     public function startDockerContainer(string $containerName) {
         $this->exec('docker start '.$containerName);
     }
+
+    public function checkContainerRunning(string $containerName) {
+        $cmd = "docker inspect -f {{.State.Running}} $containerName";
+        $onErrorMsg = 'Failed to get container running status for '.$containerName;
+        return $this->exec($cmd, $onErrorMsg) === 'true';
+    }
 }

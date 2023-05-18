@@ -1,6 +1,6 @@
 <?php
 return (object) [
-  'seleniumUrl' => 'http://{{ containerPrefix }}-behat-chrome:4444/wd/hub',
+  'seleniumUrl' => 'http://mchef-behat-chrome:4444/wd/hub',
 
   //'chromedriverUrl' => 'http://localhost:9515',
   //

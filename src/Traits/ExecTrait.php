@@ -7,6 +7,19 @@ use App\Exceptions\ExecFailed;
 trait ExecTrait {
     protected bool $verbose = false;
 
+    /**
+     * Allows for {{output}} token to interpolate output from cli failure into error message string.
+     *
+     * @param string $errorMsg
+     * @param string|array $output
+     * @return string
+     */
+    private function processErrorMsg(string $errorMsg, string | array $output): string {
+        $useOutput = is_array($output) ? implode("\n", $output) : $output;
+        $pattern = '/\{\{(?:\s+|)output(?:\s+|)\}\}/';
+        return preg_replace($pattern, $useOutput, $errorMsg);
+    }
+
     protected function exec(string $cmd, ?string $errorMsg = null): string {
         if ($this->verbose && !empty($this->cli)) {
             $this->cli->info($cmd);
@@ -14,7 +27,7 @@ trait ExecTrait {
         exec($cmd, $output, $returnVar);
 
         if ($returnVar != 0) {
-            throw new ExecFailed($errorMsg ?? "Exec failed", 0, $cmd);
+            throw new ExecFailed(($errorMsg ? $this->processErrorMsg($errorMsg, $output) : "Exec failed"), 0, $cmd);
         }
 
         return implode("\n", $output);
@@ -31,7 +44,7 @@ trait ExecTrait {
         if ($returnVar != 0) {
             // Restore output buffering.
             ini_set('output_buffering', $outputBuffering);
-            throw new ExecFailed($errorMsg ?? "Exec failed", 0, $cmd);
+            throw new ExecFailed(($errorMsg ? $this->processErrorMsg($errorMsg, $output) : "Exec failed"), 0, $cmd);
         }
 
         // Restore output buffering.
@@ -50,7 +63,7 @@ trait ExecTrait {
         if ($returnVar != 0) {
             // Restore output buffering.
             ini_set('output_buffering', $outputBuffering);
-            throw new ExecFailed($errorMsg ?? "Exec failed", 0, $cmd);
+            throw new ExecFailed(($errorMsg ? $this->processErrorMsg($errorMsg, $output) : "Exec failed"), 0, $cmd);
         }
 
         // Restore output buffering.

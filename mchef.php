@@ -81,6 +81,28 @@ class MChefCLI extends CLI {
             echo $options->help();
         }
     }
+
+    /**
+     * Prompt user yes no, returning input OR returning callable depending on $onYes or $onNo.
+     * @param string $msg
+     * @param callable|null $onYes
+     * @param callable|null $onNo
+     * @return mixed
+     */
+    public function promptYesNo(string $msg, ?callable $onYes = null, ?callable $onNo = null) {
+        $msg .= ' [y/N] ';
+        $input = readline($msg);
+        if (trim(strtolower($input)) === 'y' || trim(strtolower($input)) === 'yes') {
+            if ($onYes) {
+                return $onYes($input);
+            }
+            return;
+        }
+        if ($onNo) {
+            return $onNo($input);
+        }
+        return $input;
+    }
 }
 
 $cli = new MChefCLI();

@@ -6,7 +6,7 @@ x-db-user: &db-user
 x-db-pass: &db-pass
   "{{ dbPassword ?? 'm@0dl3ing' }}"
 x-db-name: &db-name
-  "moodle"
+  "{{ containerPrefix ?? 'mc' }}-moodle"
 x-db-container-name: &db-container-name
   "{{ containerPrefix ?? 'mc' }}-db"
 x-moodle-container-name: &moodle-container-name
