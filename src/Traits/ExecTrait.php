@@ -11,10 +11,13 @@ trait ExecTrait {
      * Allows for {{output}} token to interpolate output from cli failure into error message string.
      *
      * @param string $errorMsg
-     * @param string|array $output
+     * @param null|string|array $output
      * @return string
      */
-    private function processErrorMsg(string $errorMsg, string | array $output): string {
+    private function processErrorMsg(string $errorMsg, null | string | array $output): string {
+        if ($output === null) {
+            return $errorMsg;
+        }
         $useOutput = is_array($output) ? implode("\n", $output) : $output;
         $pattern = '/\{\{(?:\s+|)output(?:\s+|)\}\}/';
         return preg_replace($pattern, $useOutput, $errorMsg);
@@ -27,7 +30,7 @@ trait ExecTrait {
         exec($cmd, $output, $returnVar);
 
         if ($returnVar != 0) {
-            throw new ExecFailed(($errorMsg ? $this->processErrorMsg($errorMsg, $output) : "Exec failed"), 0, $cmd);
+            throw new ExecFailed(($errorMsg ? $this->processErrorMsg($errorMsg, $output) : "Exec failed : $cmd"), 0, $cmd);
         }
 
         return implode("\n", $output);

@@ -32,7 +32,7 @@ class CopySrc extends AbstractCommand {
     private function copySrc(): void {
         $mainService = Main::instance($this->cli);
         $this->recipe = $mainService->getRecipe();
-        $moodleContainer = $this->recipe->containerPrefix.'-moodle';
+        $moodleContainer = $mainService->getDockerMoodleContainerName();
 
         // Create temp directory on guest moodle container.
         $cmd = 'mktemp -d -t XXXXXXXXXX';
@@ -45,6 +45,7 @@ class CopySrc extends AbstractCommand {
 
         // Remove plugin folders from tmpDir on guest.
         // This is essential to avoid copying paths that are volumes back to host which results in docker locking up.
+        // We also don't want to wipe over local plugin work!
         $pluginsInfo = Plugins::instance($this->cli)->getPluginsInfoFromRecipe($this->recipe);
         $paths = array_map(function($volume) { return $volume->path; }, $pluginsInfo->volumes);
         foreach ($paths as $path) {
@@ -52,8 +53,8 @@ class CopySrc extends AbstractCommand {
             $this->exec($cmd);
         }
 
-        // Also purge the folder of any hidden files - we don't want these.
-        $cmd = 'docker exec -w '.$tmpDir.'/moodle '.$moodleContainer.' find . -path "./.*" -delete';
+        // Also purge the folder of git folders if present.
+        $cmd = 'docker exec -w '.$tmpDir.'/moodle '.$moodleContainer.' find . -path "./.git" -exec rm -rf {} +';
         $this->exec($cmd);
 
         $this->cli->notice('Copying moodle source to project directory');

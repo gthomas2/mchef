@@ -24,7 +24,8 @@ class PHPUnit extends AbstractCommand {
     }
 
     public function execute(Options $options): void {
-        $recipe = (Main::instance($this->cli))->getRecipe();
+        $mainService = Main::instance($this->cli);
+        $recipe = $mainService->getRecipe();
         $pluginsService = Plugins::instance($this->cli);
         if (!$recipe->includePhpUnit) {
             throw new Exception('This recipe does not have includePhpUnit set to true, OR you need to run mchef.php [recipefile] again.');
@@ -32,13 +33,16 @@ class PHPUnit extends AbstractCommand {
         $docker = Docker::instance();
 
         $this->cli->notice('Initializing PHPUnit');
-        $moodleContainer = $recipe->containerPrefix.'-moodle';
+        $moodleContainer = $mainService->getDockerMoodleContainerName();
         $cmd = 'docker exec -it '.$moodleContainer.' php /var/www/html/moodle/admin/tool/phpunit/cli/init.php';
         $this->execStream($cmd, 'Failed to initialize phpunit');
         $runCode = '/var/www/html/moodle/vendor/bin/phpunit';
 
         $plugins = $pluginsService->getPluginsCsvFromOptions($options);
-        $pluginsService->validatePluginComponentNames($plugins);
+        $pluginComps = array_map(function($i) {
+            return $i->component;
+        }, $plugins);
+        $pluginsService->validatePluginComponentNames($pluginComps, $pluginsService->loadMchefPluginsInfo());
         $groups = $options->getOpt('group');
         $runMsg = 'Executing phpunit tests';
         if (!empty($plugins)) {
@@ -47,8 +51,7 @@ class PHPUnit extends AbstractCommand {
                 $runMsg .= " and groups ".$groups;
             }
             $pluginTestPaths = [];
-            foreach ($plugins as $componentName) {
-                $plugin = $pluginsService->getPluginByComponentName($componentName);
+            foreach ($plugins as $plugin) {
                 $pluginTestPaths[] = $plugin->path.'/tests';
             }
         } else if (!empty($groups)) {

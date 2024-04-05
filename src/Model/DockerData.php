@@ -9,6 +9,6 @@ class DockerData extends Recipe {
 
         ...$args,
     ) {
-        parent::__construct(...$args);
+        parent::__construct(...self::cleanConstructArgs($args));
     }
 }

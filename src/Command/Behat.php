@@ -19,6 +19,7 @@ class Behat extends AbstractCommand {
     use ExecTrait;
 
     const COMMAND_NAME = 'behat';
+    const NETWORK_NAME = 'mc-network';
 
     protected string $browser = 'chrome'; // Not configurable for now.
 
@@ -34,6 +35,7 @@ class Behat extends AbstractCommand {
         }
         // Get match on success line.
         $pattern = '/Acceptance tests environment enabled on (.+), to run the tests use:/';
+        $this->cli->info('test1');
         $matched = preg_match($pattern, $initOutput, $matches);
         if (!$matched) {
             throw new Exception('Behat initialization seems to have failed: '.$initOutput);
@@ -54,8 +56,8 @@ class Behat extends AbstractCommand {
     public function execute(Options $options): void {
         $tags = $options->getOpt('tags');
         $this->verbose = !empty($options->getOpt('verbose'));
-
-        $recipe = (Main::instance($this->cli))->getRecipe();
+        $mainService = Main::instance($this->cli);
+        $recipe = $mainService->getRecipe();
         if (!$recipe->includeBehat) {
             throw new Exception('This recipe does not have includeBehat set to true, OR you need to run mchef.php [recipefile] again.');
         }
@@ -90,7 +92,7 @@ class Behat extends AbstractCommand {
                 $cmd = "docker start $containerName";
             } else {
                 $this->cli->info('Creating and starting docker container '.$containerName);
-                $networkName = $recipe->containerPrefix.'-network';
+                $networkName = self::NETWORK_NAME;
                 $cmd =
                     "docker run --name $containerName --network=$networkName -d -p 4444:4444 -p 7900:7900 --shm-size=\"2g\" selenium/standalone-$this->browser:latest";
             }
@@ -102,9 +104,20 @@ class Behat extends AbstractCommand {
         }
 
         $this->cli->notice('Initializing behat');
-        $moodleContainer = $recipe->containerPrefix.'-moodle';
-        $cmd = 'docker exec -it '.$moodleContainer.' php /var/www/html/moodle/admin/tool/behat/cli/init.php';
-        $output = $this->execStream($cmd, 'Failed to initialize behat');
+        $moodleContainer = $mainService->getDockerMoodleContainerName();
+        $cmd = 'docker exec -it '.$moodleContainer.' php /var/www/html/moodle/admin/tool/behat/cli/init.php --axe';
+        $this->execStream($cmd, 'Failed to initialize behat');
+        // !NOTE AWFUL, AWFUL BUG FIX!
+        // Have to do it twice because execStream only returns last line which can end up being performance information as opposed
+        // to the command to execute behat.
+        // Note - we use stream first because we want to see the table setup and exec the second time to get the full output.
+        // Performance hit will be low as the main lift is in the first call.
+        // Need to fix execStream so that it will return full output or more than just the last line.
+        $verbose = $this->verbose;
+        $this->verbose = false; // Stop command from being shown twice.
+        $output = $this->exec($cmd);
+        $this->verbose = $verbose;
+
         $behatRunCode = $this->getBehatRunCodeFromInitOutput($output);
         $behatRunCode = str_replace('vendor/bin/behat', '/var/www/html/moodle/vendor/bin/behat', $behatRunCode);
 
@@ -125,17 +138,18 @@ class Behat extends AbstractCommand {
             if (!empty($tags)) {
                 $runMsg .= " and tags ".$tags;
             }
-        } else if (!empty($plugins)) {
+        } else if (empty($tags) && !empty($plugins)) {
             $runMsg .= " for plugins ".implode(',', array_keys($plugins));
-            if (!empty($tags)) {
-                $runMsg .= " and tags ".$tags;
-            }
             $pluginTags = array_map(function($comp) {return '@'.$comp;}, array_keys($plugins));
-            $tags .= implode(',', $pluginTags);
+            $tags = !empty($tags) ? $tags : implode(',', $pluginTags);
         } else if (!empty($tags)) {
             $runMsg .= " for tags ".$tags;
         }
-        $behatRunCode .= ' --profile=headlesschrome';
+
+        $this->cli->alert('Profile '.$options->getOpt('profile'));
+        $profile = $options->getOpt('profile') ? $options->getOpt('profile') : 'headlesschrome' ;
+
+        $behatRunCode .= ' --profile="'.$profile.'"';
         if ($this->verbose) {
             $behatRunCode .= ' --format-settings=\'{"expand": true}\'';
         }
@@ -145,8 +159,10 @@ class Behat extends AbstractCommand {
         if (!empty($featureFile)) {
             $behatRunCode .= ' '.$featureFile;
         }
+        $behatRunCode .= ' --stop-on-failure';
         $this->cli->notice($runMsg);
         $cmd = 'docker exec -it '.$moodleContainer.' '.$behatRunCode;
+
         $this->execPassthru($cmd, 'Tests failed');
     }
 
@@ -159,5 +175,6 @@ class Behat extends AbstractCommand {
         $options->registerOption('tags', 'Limit your tests to features and steps containing specific tags - e.g @javascript',
             't', 'tags', self::COMMAND_NAME);
         $options->registerOption('verbose', 'Output more information', 'v', false, self::COMMAND_NAME);
+        $options->registerOption('profile', 'Use a specific profile', null, 'profile', self::COMMAND_NAME);
     }
 }

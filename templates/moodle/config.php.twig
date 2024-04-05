@@ -4,6 +4,7 @@ unset($CFG);
 global $CFG;
 $CFG = new stdClass();
 
+$CFG->dblibrary = 'native';
 $CFG->dbtype    = getenv('DB_TYPE');
 $CFG->dbhost    = getenv('DB_HOST');
 $CFG->dbname    = getenv('DB_NAME');
@@ -16,6 +17,10 @@ if ($CFG->dbtype === 'mysqli') {
     $CFG->dboptions = [
         'dbpersist' => 0,
         'dbcollation' => 'utf8mb4_unicode_ci',
+    ];
+} else {
+    $CFG->dboptions = [
+        'dbpersist' => false
     ];
 }
 
@@ -38,6 +43,12 @@ if ($debug) {
     @ini_set('display_errors', '1');
     $CFG->debug = (E_ALL | E_STRICT);
     $CFG->debugdisplay = 1;
+
+    // Show performance data in footer.
+    define('MDL_PERF', true);
+    define('MDL_PERFDB', true);
+    define('MDL_PERFTOLOG', true);
+    define('MDL_PERFTOFOOT', true);
 }
 
 {% if (includeBehat) %}
@@ -46,7 +57,21 @@ $CFG->behat_dataroot = getenv('BEHAT_DATA');
 $CFG->behat_wwwroot = getenv('BEHAT_WWWROOT');
 $CFG->behat_prefix = 'beh_';
 $CFG->behat_faildump_path = '/var/www/html/moodle/behat_dump';
+$CFG->behat_increasetimeout = 2;
+
+// Create behat profiles using browser-config tool.
 require_once('moodle-browser-config/init.php');
+
+// Add additional host profiles so that you can see the tests running on your host (requires selenium or chrome driver to be running on host).
+// Note - currently only chrome driver is supported.
+// Tip - for chromedriver to work with docker you need to start it on your host as follows:
+// chromedriver --whitelisted-ips= --allowed-origins=host.docker.internal
+$CFG->behat_profiles['host-chrome'] = [
+    'browser' => 'chrome',
+    'tags' => '@javascript',
+    'wd_host' => 'host.docker.internal:9515'
+];
+
 {% endif %}
 
 require_once(__DIR__ . '/lib/setup.php');

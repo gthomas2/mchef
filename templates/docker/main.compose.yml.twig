@@ -1,10 +1,11 @@
 ---
 version: '3.8'
+name: "{{ (containerPrefix ?? 'mchef')|lower }}"
 
 x-db-user: &db-user
-  "{{ dbUser ?? 'moodle'}}"
+  "{{ dbUser }}"
 x-db-pass: &db-pass
-  "{{ dbPassword ?? 'm@0dl3ing' }}"
+  "{{ dbPassword }}"
 x-db-name: &db-name
   "{{ containerPrefix ?? 'mc' }}-moodle"
 x-db-container-name: &db-container-name
@@ -47,6 +48,10 @@ services:
       POSTGRES_USER: *db-user
       POSTGRES_PASSWORD: *db-pass
       POSTGRES_DB: *db-name
+{% if (dbHostPort) %}
+    ports:
+      - {{dbHostPort}}:5432
+{%  endif %}
 
 {% elseif dbType == 'mysql' %}
     image: mysql:{{ dbVersion ?? 8 }}

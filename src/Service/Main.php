@@ -35,16 +35,23 @@ class Main extends AbstractService {
 
     protected function __construct() {
         $loader = new \Twig\Loader\FilesystemLoader(__DIR__.'/../../templates');
-        $loader->addPath(__DIR__.'/../../templates/moodle-browser', 'browser');
+        $loader->addPath(__DIR__.'/../../templates/moodle', 'moodle');
+        $loader->addPath(__DIR__.'/../../templates/moodle/browser', 'moodle-browser');
+        $loader->addPath(__DIR__.'/../../templates/docker', 'docker');
         $this->twig = new \Twig\Environment($loader);
     }
 
-    final public static function instance(CLI $cli): Main {
+    final public static function instance(?CLI $cli): Main {
         return self::setup_instance($cli);
     }
 
-    public function getChefPath() {
-        return getcwd().'/.mchef';
+    public function getChefPath($failOnNotFound = false): ?string {
+        $chefPath =  File::instance()->findFileInOrAboveDir('.mchef');
+        if ($failOnNotFound && !is_dir($chefPath)) {
+            $this->cli->alert('Your current working directory, or the directories above it, do not contain a .mchef directory');
+            die;
+        }
+        return $chefPath;
     }
 
     public function getDockerPath() {
@@ -59,7 +66,7 @@ class Main extends AbstractService {
         $this->cli->notice('Starting docker containers');
         // @Todo - force-recreate and --build need to be flags that get passed in, not hard coded.
         $cmd = "docker-compose -f $ymlPath up -d --force-recreate --build";
-        $this->exec($cmd, "Error starting docker containers");
+        $this->execPassthru($cmd, "Error starting docker containers - try pruning with 'docker builder prune' OR 'docker system prune' (note 'docker system prune' will destroy all non running container images)");
 
         // @Todo - Add code here to check docker ps for expected running containers.
         // For example, if one of the Apache virtual hosts has an error in it, it will bomb out.
@@ -72,9 +79,9 @@ class Main extends AbstractService {
         $this->cli->notice('Starting containers');
         $dockerService = Docker::instance($this->cli);
         $recipe = $this->getRecipe();
-        $moodleContainer = $recipe->containerPrefix.'-moodle';
+        $moodleContainer = $this->getDockerMoodleContainerName();
         $dockerService->startDockerContainer($moodleContainer);
-        $dbContainer = $recipe->containerPrefix.'-db';
+        $dbContainer = $this->getDockerDatabaseContainerName();
         $dockerService->startDockerContainer($dbContainer);
 
 
@@ -84,8 +91,8 @@ class Main extends AbstractService {
     public function stopContainers(): void {
         $this->cli->notice('Stopping containers');
         $recipe = $this->getRecipe();
-        $moodleContainer = $recipe->containerPrefix.'-moodle';
-        $dbContainer = $recipe->containerPrefix.'-db';
+        $moodleContainer = $this->getDockerMoodleContainerName();
+        $dbContainer = $this->getDockerDatabaseContainerName();
         $behatContainer = $recipe->containerPrefix.'-behat';
         $toStop = [
             $moodleContainer,
@@ -107,7 +114,9 @@ class Main extends AbstractService {
 
     private function configureDockerNetwork(Recipe $recipe): void {
         $dockerService = Docker::instance($this->cli);
-        $networkName = $recipe->containerPrefix.'-network';
+        //$networkName = $recipe->containerPrefix.'-network';
+        // TODO - default should be mc-network unless defined in recipe.
+        $networkName = 'mc-network';
 
         if ($dockerService->networkExists($networkName)) {
             $this->cli->info('Skipping creating network as it exists: '.$networkName);
@@ -117,8 +126,8 @@ class Main extends AbstractService {
             $this->exec($cmd, "Error creating network $networkName");
         }
 
-        $dbContainer = $recipe->containerPrefix.'-db';
-        $moodleContainer = $recipe->containerPrefix.'-moodle';
+        $dbContainer = $this->getDockerDatabaseContainerName();
+        $moodleContainer = $this->getDockerMoodleContainerName();
 
         $cmd = "docker network connect $networkName $dbContainer";
         $this->exec($cmd, "Failed to connect $dbContainer to $networkName");
@@ -215,16 +224,16 @@ class Main extends AbstractService {
 
         // Create moodle config asset.
         try {
-            $moodleConfigContents = $this->twig->render('config.php', (array) $recipe);
+            $moodleConfigContents = $this->twig->render('@moodle/config.php.twig', (array) $recipe);
         } catch (\Exception $e) {
             throw new Exception('Failed to parse config.php template: '.$e->getMessage());
         }
         file_put_contents($assetsPath.'/config.php', $moodleConfigContents);
 
-        if ($recipe->includeBehat) {
+        if ($recipe->includeBehat || $recipe->developer) {
             try {
                 // Create moodle-browser-config config.
-                $browserConfigContents = $this->twig->render('@browser/config.php', (array) $recipe);
+                $browserConfigContents = $this->twig->render('@moodle-browser/config.php.twig', (array) $recipe);
             } catch (\Exception $e) {
                 throw new Exception('Failed to parse moodle-browser config.php template: '.$e->getMessage());
             }
@@ -234,6 +243,20 @@ class Main extends AbstractService {
             mkdir($browserConfigAssetsPath, 0755, true);
         }
         file_put_contents($browserConfigAssetsPath.'/config.php', $browserConfigContents);
+
+        if ($recipe->includeXdebug || $recipe->developer) {
+            try {
+                $xdebugContents = $this->twig->render('@docker/install-xdebug.sh.twig', ['mode' => $recipe->xdebugMode ?? 'debug']);
+            } catch (\Exception $e) {
+                throw new Exception('Failed to parse install-xdebug.sh template: '.$e->getMessage());
+            }
+        }
+        $scriptsAssetsPath = $assetsPath.'/scripts';
+        if (!file_exists($scriptsAssetsPath)) {
+            mkdir($scriptsAssetsPath, 0755, true);
+        }
+        file_put_contents($scriptsAssetsPath.'/install-xdebug.sh', $xdebugContents);
+
     }
 
     public function create(string $recipeFilePath) {
@@ -266,7 +289,7 @@ class Main extends AbstractService {
         $this->updateHostHosts($recipe);
 
         try {
-            $dockerFileContents = $this->twig->render('main.dockerfile', (array) $dockerData);
+            $dockerFileContents = $this->twig->render('@docker/main.dockerfile.twig', (array) $dockerData);
         } catch (\Exception $e) {
             throw new Exception('Failed to parse main.dockerfile template: '.$e->getMessage());
         }
@@ -283,7 +306,7 @@ class Main extends AbstractService {
         $dockerData->dockerFile = $dockerPath.'/Dockerfile';
         file_put_contents($dockerData->dockerFile, $dockerFileContents);
 
-        $dockerComposeFileContents = $this->twig->render('main.compose.yml', (array) $dockerData);
+        $dockerComposeFileContents = $this->twig->render('@docker/main.compose.yml.twig', (array) $dockerData);
         $ymlPath = $dockerPath.'/main.compose.yml';
         file_put_contents($ymlPath, $dockerComposeFileContents);
 
@@ -306,12 +329,27 @@ class Main extends AbstractService {
         $this->recipe = $this->parseRecipe($recipeFilePath);
         return $this->recipe;
     }
-    
+
     public function getPluginInfo(): PluginsInfo {
         return $this->pluginInfo;
     }
 
     public function getPluginService() {
         return $this->pluginsService;
+    }
+
+    private function getDockerContainerName(string $suffix) {
+        if (empty($this->recipe)) {
+            $this->getRecipe();
+        }
+        return $this->recipe->containerPrefix.'-'.$suffix;
+    }
+
+    public function getDockerMoodleContainerName() {
+        return $this->getDockerContainerName('moodle');
+    }
+
+    public function getDockerDatabaseContainerName() {
+        return $this->getDockerContainerName('db');
     }
 }

@@ -174,6 +174,9 @@ class Plugins extends AbstractService {
             case 'theme':
                 $path = '/theme/' . implode('/', $parts);
                 break;
+            case 'tiny':
+                $path = '/lib/editor/tiny/plugins/' . implode('/', $parts);
+                break;
             case 'tinymce':
                 $path = '/lib/editor/tinymce/plugins/' . implode('/', $parts);
                 break;
@@ -238,7 +241,8 @@ class Plugins extends AbstractService {
         }
         $pInfoRecipeSources = array_map(
             function(Plugin $plugin) { return $plugin->recipeSrc; }, $pluginsInfo->plugins);
-        return empty(array_diff($pInfoRecipeSources, $recipe->plugins));
+        $recipePlugins = array_values($recipe->plugins);
+        return empty(array_diff($pInfoRecipeSources, $recipePlugins)) && empty(array_diff($recipePlugins, $pInfoRecipeSources));
     }
 
     public function getPluginsInfoFromRecipe(Recipe $recipe): ?PluginsInfo {
@@ -276,7 +280,7 @@ class Plugins extends AbstractService {
                             } else {
                                 $this->cli->info('Skipping copying '.$pluginName.' as already present at '.$targetPath);
                                 // Plugin already present locally.
-                                File::instance()->delete_dir($tmpDir);
+                                File::instance()->deleteDir($tmpDir);
                             }
                             $volume = new Volume(...['path' => $pluginPath, 'hostPath' => $targetPath]);
                             $volumes[] = $volume;
@@ -298,10 +302,16 @@ class Plugins extends AbstractService {
         // Cache to file.
         $mainService = (Main::instance($this->cli));
         $chefPath = $mainService->getChefPath();
-        $pluginsInfoPath = $this->getMchefPluginsInfoPath();
+        if ($chefPath === null) {
+            // No chef path, create one if we are at same level as recipe.
+            if (realpath(dirname($recipe->getRecipePath())) === realpath(getcwd())) {
+                $chefPath = realpath(dirname($recipe->getRecipePath())).'/.mchef';
+            }
+        }
         if (!file_exists($chefPath)) {
             mkdir($chefPath, 0755);
         }
+        $pluginsInfoPath = $this->getMchefPluginsInfoPath();
         $pluginsInfo = new PluginsInfo($volumes, $plugins);
         file_put_contents($pluginsInfoPath, serialize($pluginsInfo));
         return $pluginsInfo;

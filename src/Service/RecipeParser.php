@@ -29,6 +29,7 @@ class RecipeParser extends AbstractService {
         $recipe = new Recipe(...(array) $object);
 
         $this->setDefaults($recipe);
+        $recipe->setRecipePath($filePath);
         
         return $recipe;
     }
@@ -69,6 +70,11 @@ class RecipeParser extends AbstractService {
                 }
             }
             $recipe->behatWwwRoot = $recipe->hostProtocol.'://'.$recipe->behatHost.($portStr);
+        }
+
+        // Setup database defaults.
+        if (empty($recipe->dbName)) {
+            $recipe->dbName = ($recipe->containerPrefix ?? 'mc').'-moodle';
         }
     }
 }

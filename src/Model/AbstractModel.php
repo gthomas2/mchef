@@ -21,6 +21,15 @@ abstract class AbstractModel {
         return new $calledClass(...$data);
     }
 
+    public static function cleanConstructArgs($args): array {
+        $args = array_filter(
+            $args,
+            fn($key) => str_contains($key, '\\') === false,
+            ARRAY_FILTER_USE_KEY
+        );
+        return $args;
+    }
+
     public static function fromJSON(string $json) {
         $object = json_decode($json);
         if (!$object) {

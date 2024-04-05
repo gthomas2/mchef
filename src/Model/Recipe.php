@@ -3,8 +3,17 @@
 namespace App\Model;
 
 class Recipe extends AbstractModel {
+    private string $_recipePath;
+
+    public function setRecipePath(string $recipePath) {
+        $this->_recipePath = $recipePath;
+    }
+    public function getRecipePath(): string {
+        return $this->_recipePath;
+    }
 
     public function __construct(
+
         /**
          * @var string - e.g. 4.1.0
          */
@@ -73,7 +82,7 @@ class Recipe extends AbstractModel {
         /**
          * @var string - database type - e.g. pgsql / mysql
          */
-        public ?string $dbType = null,
+        public ?string $dbType = 'pgsql',
 
         /**
          * @var string - database version - e.g 8
@@ -83,17 +92,27 @@ class Recipe extends AbstractModel {
         /**
          * @var string - database user
          */
-        public ?string $dbUser = null,
+        public string $dbUser = 'moodle',
 
         /**
          * @var string - database password
          */
-        public ?string $dbPassword = null,
+        public string $dbPassword = 'm@0dl3ing',
 
         /**
          * @var string - database root password
          */
         public ?string $dbRootPassword = null,
+
+        /**
+         * @var string|null - database name
+         */
+        public ?string $dbName = null,
+
+        /**
+         * @var string|null - database host port to forward to
+         */
+        public ?string $dbHostPort = null,
 
         /**
          * Prefix for containers.
@@ -125,6 +144,16 @@ class Recipe extends AbstractModel {
          * @var bool - include behat configuration
          */
         public bool $includeBehat = false,
+
+        /**
+         * @var bool - include xdebug
+         */
+        public bool $includeXdebug = false,
+
+        /**
+         * @var string - xdebug mode
+         */
+        public $xdebugMode = null,
 
         /**
          * @var string - behat host

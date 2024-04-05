@@ -7,13 +7,15 @@ class Project extends AbstractService {
         return self::setup_instance($cli);
     }
 
+    public function getProjectDir() {
+        $mainService = Main::instance($this->cli);
+        $chefPath = $mainService->getChefPath(true);
+        return realpath($chefPath . DIRECTORY_SEPARATOR . '..');
+    }
+
     public function purgeProjectFolderOfNonPluginCode() {
         $mainService = Main::instance($this->cli);
-        $chefPath = $mainService->getChefPath();
-        if (!is_dir($chefPath)) {
-            $this->cli->alert('Your current working directory does not contain a .mchef directory');
-            die;
-        }
+        $projectDir = $this->getProjectDir();
 
         $recipe = $mainService->getRecipe();
 
@@ -27,6 +29,6 @@ class Project extends AbstractService {
         $paths[] = './*recipe.json';
         $this->cli->promptYesNo('All non project related files will be removed from this dir. Continue?', null,
             function() { die('Aborted!'); });
-        File::instance()->delete_all_files_excluding($chefPath, [], $paths);
+        File::instance()->deleteAllFilesExcluding($projectDir, [], $paths);
     }
 }

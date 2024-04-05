@@ -77,11 +77,18 @@ RUN rm -rf $MOODLE_PATH/*
 RUN git clone https://github.com/moodle/moodle.git --branch $MOODLE_TAG --depth 1 $MOODLE_PATH
 COPY assets/config.php $MOODLE_PATH/config.php
 
-{% if (includeBehat) %}
+{% if (includeBehat or developer) %}
 # Install behat config helper.
 RUN git clone https://github.com/andrewnicols/moodle-browser-config.git --branch main --depth 1 $MOODLE_PATH/moodle-browser-config
 COPY assets/moodle-browser-config/config.php $MOODLE_PATH/moodle-browser-config/config.php
 {% endif %}
+
+{% if (includeXdebug or developer) %}
+# Install xdebug.
+COPY assets/scripts/install-xdebug.sh /tmp/
+RUN chmod u+x /tmp/install-xdebug.sh && /tmp/install-xdebug.sh
+RUN rm /tmp/install-xdebug.sh
+{%  endif %}
 
 VOLUME $MOODLE_DATA
 {% for volume in volumes %}

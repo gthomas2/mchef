@@ -1,0 +1,20 @@
+{
+    "albums": [
+        {
+            "title": "Exile on Main St",
+            "artist": {
+                "name": "The Rolling Stones",
+                "isBand": true
+            },
+            "year": "1972"
+        },
+        {
+            "title": "South Eastern",
+            "artist": {
+                "name": "Jasob Isbell",
+                "isBand": false
+            },
+            "year": "2013"
+        }
+    ]
+}
