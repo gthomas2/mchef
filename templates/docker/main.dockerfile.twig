@@ -70,7 +70,9 @@ RUN \
 	sed -i "s/zlib.output_compression = .*/zlib.output_compression = On/" /usr/local/etc/php/php.ini && \
 	sed -i "s/max_execution_time = .*/max_execution_time = $MAX_EXECUTION_TIME/" /usr/local/etc/php/php.ini && \
 	sed -i "s/post_max_size = .*/post_max_size = $MAX_UPLOAD_FILESIZE/" /usr/local/etc/php/php.ini && \
-	sed -i "s/upload_max_filesize = .*/upload_max_filesize = $MAX_UPLOAD_FILESIZE/" /usr/local/etc/php/php.ini
+	sed -i "s/upload_max_filesize = .*/upload_max_filesize = $MAX_UPLOAD_FILESIZE/" /usr/local/etc/php/php.ini  && \
+    sed -i "s/error_log = .*/log_errors = on/" /usr/local/etc/php/php.ini && \
+    sed -i "s/error_log = .*/error_log = syslog/" /usr/local/etc/php/php.ini
 
 # Install Moodle.
 RUN rm -rf $MOODLE_PATH/*
