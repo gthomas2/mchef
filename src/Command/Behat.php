@@ -163,7 +163,7 @@ class Behat extends AbstractCommand {
         $this->cli->notice($runMsg);
         $cmd = 'docker exec -it '.$moodleContainer.' '.$behatRunCode;
 
-        $this->execPassthru($cmd, 'Tests failed');
+        $this->execPassthru($cmd, 'Tests failed '.$cmd);
     }
 
     public function register(Options $options): void {
