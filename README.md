@@ -10,7 +10,7 @@ MChef is a command-line tool designed to manage and automate various tasks relat
 
 ## Requirements
 
-- PHP 7.4 or higher
+- PHP 8.x or higher
 - Composer (https://getcomposer.org/download/)
 
 ## Installation
