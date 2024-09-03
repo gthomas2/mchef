@@ -65,7 +65,8 @@ class InstallToBin extends AbstractService {
                 throw new Exception('Unable to install to bin dir as it already exists there - ' . $binDir . '/mchef.php');
             }
         }
-        symlink($installFilePath, $binDir.'/mchef.php');
+
+        $this->exec('sudo ln -s '.$installFilePath.' '.$binDir.'/mchef.php');
 
         $this->cli->success('Success! mchef.php has successfully been installed to '.$installFilePath);
         $this->cli->success('Open a brand new terminal and you should be able to call mchef.php directly (i.e. no need to prefix with php)');
