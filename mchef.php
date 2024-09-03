@@ -38,7 +38,7 @@ class MChefCLI extends CLI {
     }
 
     protected function setup(Options $options) {
-        if (intval(phpversion('tidy')) < 8) {
+        if (intval(explode('.', phpversion(), 2)[0]) < 8) {
             $this->error('PHP 8.0+ supported - you are using '.phpversion('tidy'));
             die;
         }
