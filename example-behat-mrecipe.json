@@ -10,5 +10,5 @@
   "port": 80,
   "updateHostHosts": true,
   "dbType": "pgsql",
-  "devMode": true
+  "developer": true
 }
