@@ -5,6 +5,7 @@
   "plugins": [
     "https://github.com/gthomas2/moodle-filter_imageopt"
   ],
+  "containerPrefix": "imageopt",
   "host": "moodle-image-opt.test",
   "port": 80,
   "updateHostHosts": true,
