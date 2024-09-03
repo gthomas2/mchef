@@ -45,6 +45,11 @@ RUN \
         echo "	</Directory>"; \
         echo "</VirtualHost>"; \
     } > /etc/apache2/sites-enabled/000-default.conf
+
+{% if port != 80 %}
+RUN echo 'Listen {{ port }}' >> /etc/apache2/apache2.conf
+{% endif %}
+
 RUN apachectl -t
 
 # Create VirtualHost for behat.
