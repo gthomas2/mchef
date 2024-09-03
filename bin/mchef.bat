@@ -1,0 +1,1 @@
+php C:\Moodle\mchef\bin\mchef.php %*

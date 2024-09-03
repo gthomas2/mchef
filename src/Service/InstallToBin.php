@@ -25,7 +25,7 @@ class InstallToBin extends AbstractService {
             $dirs = explode(':', $path);
 
             foreach ($dirs as $dir) {
-                $executablePath = $dir . '/php';
+                $executablePath = $dir . 'DIRECTORY_SEPARATOR .  "php" . DIRECTORY_SEPARATOR';
                 if (is_executable($executablePath)) {
                     $phpExecutablePath = $executablePath;
                     break;
@@ -41,31 +41,32 @@ class InstallToBin extends AbstractService {
         $path = getenv('PATH');
         $dirs = explode(':', $path);
 
+        $contents = file_get_contents(__DIR__.'DIRECTORY_SEPARATOR .  "../../mchef.php" . DIRECTORY_SEPARATOR');
+        $phpPath = $this->get_php_executable_path();
+        $contents = '#!'.$phpPath."\n".$contents;
+        $installFilePath = __DIR__.'DIRECTORY_SEPARATOR .  "../../bin/mchef.php" . DIRECTORY_SEPARATOR';
+        file_put_contents($installFilePath, $contents);
+        chmod($installFilePath, 0750);
+
         // Check if the user's home bin folder is in the $PATH
-        $userBinDir = getenv('HOME') . '/bin';
+        $userBinDir = getenv('HOME') . 'DIRECTORY_SEPARATOR .  "bin" . DIRECTORY_SEPARATOR';
         if (in_array($userBinDir, $dirs)) {
             $binDir = $userBinDir;
-        } else if (in_array('/usr/local/bin', $dirs)) {
-            $binDir = '/usr/local/bin';
+        } else if (in_array('DIRECTORY_SEPARATOR .  "usr/local/bin" . DIRECTORY_SEPARATOR', $dirs)) {
+            $binDir = 'DIRECTORY_SEPARATOR .  "usr/local/bin" . DIRECTORY_SEPARATOR';
         } else {
             throw new Exception('Could not find a suitable bin directory for installation.');
         }
 
-        $contents = file_get_contents(__DIR__.'/../../mchef.php');
-        $phpPath = $this->get_php_executable_path();
-        $contents = '#!'.$phpPath."\n".$contents;
-        $installFilePath = __DIR__.'/../../bin/mchef.php';
-        file_put_contents($installFilePath, $contents);
-        chmod($installFilePath, 0750);
-        $binFilePath = $binDir.'/mchef.php';
+        $binFilePath = $binDir.'DIRECTORY_SEPARATOR .  "mchef.php" . DIRECTORY_SEPARATOR';
         if (file_exists($binFilePath)) {
             try {
                 unlink($binFilePath);
             } catch (\Exception $e) {
-                throw new Exception('Unable to install to bin dir as it already exists there - ' . $binDir . '/mchef.php');
+                throw new Exception('Unable to install to bin dir as it already exists there - ' . $binDir . 'DIRECTORY_SEPARATOR .  "mchef.php" . DIRECTORY_SEPARATOR');
             }
         }
-        symlink($installFilePath, $binDir.'/mchef.php');
+        symlink($installFilePath, $binDir.'DIRECTORY_SEPARATOR .  "mchef.php" . DIRECTORY_SEPARATOR');
 
         $this->cli->success('Success! mchef.php has successfully been installed to '.$installFilePath);
         $this->cli->success('Open a brand new terminal and you should be able to call mchef.php directly (i.e. no need to prefix with php)');
