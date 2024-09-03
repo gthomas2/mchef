@@ -2,3 +2,5 @@
 .idea
 vendor
 bin/mchef.php
+.mchef
+composer.phar

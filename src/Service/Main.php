@@ -286,7 +286,9 @@ class Main extends AbstractService {
         $dockerData = new DockerData($volumes, null, ...(array) $recipe);
         $dockerData->volumes = $volumes;
 
-        $this->updateHostHosts($recipe);
+        if ($recipe->updateHostHosts) {
+            $this->updateHostHosts($recipe);
+        }
 
         try {
             $dockerFileContents = $this->twig->render('@docker/main.dockerfile.twig', (array) $dockerData);
