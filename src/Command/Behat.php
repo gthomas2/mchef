@@ -159,7 +159,7 @@ class Behat extends AbstractCommand {
         if (!empty($featureFile)) {
             $behatRunCode .= ' '.$featureFile;
         }
-        $behatRunCode .= ' --stop-on-failure';
+        // $behatRunCode .= ' --stop-on-failure';
         $this->cli->notice($runMsg);
         $cmd = 'docker exec -it '.$moodleContainer.' '.$behatRunCode;
 

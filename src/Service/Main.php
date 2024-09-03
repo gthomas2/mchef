@@ -274,7 +274,7 @@ class Main extends AbstractService {
             $behatDumpPath = getcwd().'/_behat_dump';
             if (!file_exists($behatDumpPath)) {
                 mkdir($behatDumpPath, 0755);
-                file_put_contents($behatDumpPath.'/.htaccess', 'Options +Indexes');
+                file_put_contents($behatDumpPath.'/.htaccess', "Options +Indexes\nAllow from All");
             }
         }
 
