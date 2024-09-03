@@ -132,7 +132,7 @@ class Main extends AbstractService {
         $cmd = "docker network connect $networkName $dbContainer";
         $this->exec($cmd, "Failed to connect $dbContainer to $networkName");
 
-        if ($recipe->host && $recipe->host !== 'localhost') {
+        if ($recipe->includeBehat && $recipe->host !== 'localhost') {
             // Note - the alias is essential here for behat tests to work.
             // The behat docker container needs to understand the host name when chrome driver tries
             // to operate on the host.
