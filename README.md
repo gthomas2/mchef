@@ -39,23 +39,29 @@ MChef is a command-line tool designed to manage and automate various tasks relat
     php mchef.php -i
     ```
 
+    This will also create a symlink so you can use the command
+    ```sh
+    mchef.php [command] [options]
+    ```
+    afterwards.
+
 
 ## Usage
 
 To use MChef, run the following command:
 
 ```sh
-php mchef.php [command] [options]
+mchef.php [command] [options]
 ```
 
 To see an overview of commands, run:
 
 ```sh
-php mchef.php
+mchef.php
 ```
 
 To run the example recipe use:
 
 ```sh
-php mchef.php example-mrecipe.json
+mchef.php example-mrecipe.json
 ```
