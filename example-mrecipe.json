@@ -10,5 +10,6 @@
   "port": 80,
   "updateHostHosts": true,
   "dbType": "pgsql",
-  "developer": true
+  "developer": true,
+  "cloneRepoPlugins": true
 }
