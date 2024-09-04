@@ -6,12 +6,13 @@ use App\Model\Plugin;
 use App\Model\PluginsInfo;
 use App\Model\Recipe;
 use App\Model\Volume;
+use PHPUnit\Framework\MockObject\MockObject;
 use splitbrain\phpcli\CLI;
 use splitbrain\phpcli\Exception;
 use splitbrain\phpcli\Options;
 
 class Plugins extends AbstractService {
-    final public static function instance(CLI $cli): Plugins {
+    final public static function instance(CLI|MockObject $cli): Plugins {
         return self::setup_instance($cli);
     }
 

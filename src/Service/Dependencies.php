@@ -16,7 +16,7 @@ class Dependencies extends AbstractService {
 
     public function check(): void {
       $failed = false;
-      
+
       $this->cli->notice('Checking your docker version');
       $cmd = "docker version";
       try {
@@ -25,7 +25,7 @@ class Dependencies extends AbstractService {
         $this->cli->error($ex);
         $failed = true;
       }
-      
+
       $this->cli->notice('Checking your docker compose version');
       try {
         $cmd = "docker compose version -f json";
@@ -45,13 +45,17 @@ class Dependencies extends AbstractService {
         $this->cli->error($ex);
         $failed = true;
       }
-      
+
       $this->cli->notice('Checking your php version.');
-      if (intval(explode('.', phpversion(), 2)[0]) < 8) {
-          $this->warning('PHP 8.0+ supported - you are using '.phpversion());
+
+      $phpParts = explode('.', phpversion(), 2);
+      $major = intval($phpParts[0]);
+      $point = intval($phpParts[1]);
+      if ($major < 8 || $point < 2) {
+          $this->cli->error('PHP 8.2+ supported - you are using '.phpversion());
           $failed = true;
       }
-      
+
       if($failed) {
           $this->cli->error('Please correct your system errors and try again.');
           die;

@@ -4,6 +4,7 @@ namespace App\Traits;
 
 use App\Interfaces\SingletonInterface;
 use MChefCLI;
+use PHPUnit\Framework\MockObject\MockObject;
 
 trait SingletonTrait {
     /**
@@ -15,11 +16,11 @@ trait SingletonTrait {
         // Singleton.
     }
 
-    public function set_cli(MChefCLI $cli) {
+    public function set_cli(MChefCLI|MockObject $cli) {
         $this->cli = $cli;
     }
 
-    protected static function setup_instance(?MChefCLI $cli = null): SingletonInterface {
+    protected static function setup_instance(MChefCLI|MockObject|null $cli = null): SingletonInterface {
         static $instances = [];
         $class = get_called_class();
         if (!empty($instances[$class])) {
