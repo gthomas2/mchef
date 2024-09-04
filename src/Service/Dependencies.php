@@ -37,15 +37,15 @@ class Dependencies extends AbstractService {
           $matches
         );
         $dcVersion = explode('.', $matches[1])[0];
+        if(intval($dcVersion) < 2) {
+          $this->cli->error("docker compose version >= 2.x required");
+          $failed = true;
+        }
       } catch(\Exception $ex) {
         $this->cli->error($ex);
         $failed = true;
       }
       
-      if(intval($dcVersion) < 2) {
-        $this->cli->error("docker compose version >= 2.x required");
-        $failed = true;
-      }
       $this->cli->notice('Checking your php version.');
       if (intval(explode('.', phpversion(), 2)[0]) < 8) {
           $this->warning('PHP 8.0+ supported - you are using '.phpversion());
