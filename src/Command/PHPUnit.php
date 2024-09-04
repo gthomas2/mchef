@@ -29,7 +29,7 @@ class PHPUnit extends AbstractCommand {
         $mainService = Main::instance($this->cli);
         $recipe = $mainService->getRecipe();
         $pluginsService = Plugins::instance($this->cli);
-        if (!$recipe->includePhpUnit) {
+        if (!$recipe->includePhpUnit && !$recipe->developer) {
             throw new Exception('This recipe does not have includePhpUnit set to true, OR you need to run mchef.php [recipefile] again.');
         }
 
