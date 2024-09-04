@@ -2,11 +2,17 @@
 
 error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
 
+$vendor_path = __DIR__.'/vendor/autoload.php';
 if (stripos(__FILE__, 'bin/')) {
-    require __DIR__ . '/../vendor/autoload.php';
-} else {
-    require __DIR__ . '/vendor/autoload.php';
+    $vendor_path = __DIR__ . '/../vendor/autoload.php';
+} 
+
+if (!file_exists($vendor_path)) {
+    echo 'Please run composer install first!';
+    die;
 }
+
+require $vendor_path;
 
 use splitbrain\phpcli\CLI;
 use splitbrain\phpcli\Options;
