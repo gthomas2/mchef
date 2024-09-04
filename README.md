@@ -72,3 +72,6 @@ To run the example recipe use:
 ```sh
 mchef.php example-mrecipe.json
 ```
+
+Search in  "/src/Model/Recipe.php" for all the possible ingredients of your recipe.
+Enjoy cooking.
