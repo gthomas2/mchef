@@ -17,6 +17,10 @@ class Main extends AbstractService {
      * @var Recipe
      */
     private $recipe;
+    /**
+     * @var Recipe
+     */
+    private $dockerService;
 
     /**
      * @var Plugins plugins service
@@ -175,6 +179,11 @@ class Main extends AbstractService {
         $this->cli->notice('Installation finished. Your mchef-Moodle is now available at: ' . $recipe->wwwRoot );
     }
 
+    private function checkPortBinding(Recipe $recipe): bool {
+      $dockerService = Docker::instance($this->cli);
+      return $dockerService->checkPortAvailable($recipe->port);
+    }
+    
     private function updateHostHosts(Recipe $recipe): void {
         if ($recipe->updateHostHosts) {
             try {
@@ -298,7 +307,8 @@ class Main extends AbstractService {
             );
         }
         $recipe = $this->parseRecipe($recipeFilePath);
-
+        $this->checkPortBinding($recipe) || die();
+        
         if ($recipe->includeBehat) {
             $behatDumpPath = getcwd().'/_behat_dump';
             if (!file_exists($behatDumpPath)) {

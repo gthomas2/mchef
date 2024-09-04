@@ -28,6 +28,10 @@ class MChefCLI extends CLI {
      * @var \App\Service\Dependencies;
      */
     public $depService;
+    /**
+     * @var \App\Service\Docker;
+     */
+    public $dockerService;
 
     private function registerCommands(Options $options) {
         if (strpos(__FILE__, 'bin/mchef.php') !== false) {
