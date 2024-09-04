@@ -165,10 +165,37 @@ class Main extends AbstractService {
 
             // TODO check if DB exist already and ask if we schould overwrite
 
+
             $this->cli->notice('Installing DB');
             $installoptions = '/var/www/html/moodle/admin/cli/install_database.php --lang=de --adminpass=123456 --adminemail=admin@example.com --agree-license --fullname=mchefMOODLE --shortname=mchefMOODLE';
-            $cmd = 'docker exec '.$moodleContainer.' php '.$installoptions;
-            $this->execPassthru($cmd);
+            $cmdinstall = 'docker exec '.$moodleContainer.' php '.$installoptions;
+            $output = [];
+
+            exec($cmdinstall, $output, $returnVar);
+            // Überprüfen, ob der Befehl erfolgreich war
+            if ($returnVar === 0) {
+                $this->cli->notice('Moodle database installed successfully.');
+            } else {
+                // Fehlermeldung ausgeben, wenn die Installation fehlschlägt
+
+                // Möglichkeit, den Benutzer zu fragen, ob er die existierende DB überschreiben möchte
+                $overwrite = readline("Do you want to delete the db and install fresh? (yes/no): ");
+
+                if (strtolower(trim($overwrite)) === 'yes') {
+                    // Hier kannst du das Löschen der bestehenden Datenbank und erneute Installation einleiten
+                    // Befehl zum Löschen der DB ausführen oder andere Schritte unternehmen
+                    $this->cli->notice('Overwriting the existing Moodle database...');
+                    // Führe einen Befehl aus, um die bestehende Datenbank zu löschen oder neu zu erstellen
+                    $dbCheckCmd = 'docker exec ' . $dbContainer . ' psql -U ' . $recipe->dbUser . ' -d ' . $recipe->dbName . ' -c "DO \$\$ DECLARE row RECORD; BEGIN FOR row IN (SELECT tablename FROM pg_tables WHERE schemaname = \'public\') LOOP EXECUTE \'DROP TABLE IF EXISTS public.\' || quote_ident(row.tablename); END LOOP; END \$\$;"';
+
+                    exec($dbCheckCmd, $outpup, $return);
+
+                    exec($cmdinstall, $installoutput, $returnVar);
+
+                } else {
+                    $this->cli->notice('Skipping Moodle database installation.');
+                }
+            }
         }
 
         // Print out wwwroot
