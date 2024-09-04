@@ -3,12 +3,16 @@
   "moodleTag": "v4.1.0",
   "phpVersion": "8.0",
   "plugins": [
-    "https://github.com/gthomas2/moodle-moodle-filter_imageopt"
+    {
+      "repo": "https://github.com/gthomas2/moodle-moodle-filter_imageopt",
+      "branch": "main"
+    }
   ],
   "containerPrefix": "imageopt",
   "host": "moodle-image-opt.test",
   "port": 80,
   "updateHostHosts": true,
   "dbType": "pgsql",
-  "developer": true
+  "developer": true,
+  "cloneRepoPlugins": true
 }

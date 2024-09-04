@@ -28,9 +28,9 @@ class Plugin extends AbstractModel {
         public Volume $volume,
 
         /**
-         * @var string How the plugin was defined in the recipe - e.g. "https://github.com/gthomas2/moodle-filter_imageopt"
+         * @var object|string How the plugin was defined in the recipe - e.g. "https://github.com/gthomas2/moodle-filter_imageopt"
          */
-        public string $recipeSrc,
+        public object|string $recipeSrc,
 
         /**
          * @var string TYPE_SINGLE | TYPE_COLLECTION

@@ -237,7 +237,7 @@ class Plugins extends AbstractService {
         if (file_exists($pluginsInfoPath)) {
             try {
                 $object = unserialize(file_get_contents($pluginsInfoPath), [
-                    'allowed_classes' => [PluginsInfo::class, Plugin::class, Volume::class]]);
+                    'allowed_classes' => [PluginsInfo::class, Plugin::class, Volume::class, \stdClass::class]]);
             } catch (\Exception) {
                 return null;
             }
@@ -249,12 +249,27 @@ class Plugins extends AbstractService {
         return null;
     }
 
+    /**
+     * Check if the plugins info is in sync with the recipe.
+     *
+     * @param Recipe $recipe
+     * @param PluginsInfo $pluginsInfo
+     *
+     * @return bool
+     */
     private function checkPluginsInfoInSync(Recipe $recipe, PluginsInfo $pluginsInfo) {
         if (empty($recipe->plugins) && empty($pluginsInfo->plugins)) {
             return true;
         }
+
         $pInfoRecipeSources = array_map(
-            static function(Plugin $plugin) { return $plugin->recipeSrc; }, $pluginsInfo->plugins);
+            function(Plugin $plugin) {
+
+                [$repo, ] = $this->extractRepoInfoFromPlugin($plugin->recipeSrc);
+
+                return $repo;
+
+         }, $pluginsInfo->plugins);
 
         $recipePlugins = array_map(
             function($plugin) {
@@ -268,6 +283,13 @@ class Plugins extends AbstractService {
         return empty(array_diff($pInfoRecipeSources, $recipePlugins)) && empty(array_diff($recipePlugins, $pInfoRecipeSources));
     }
 
+    /**
+     * Get plugins info from recipe.
+     *
+     * @param Recipe $recipe
+     *
+     * @return PluginsInfo|null
+     */
     public function getPluginsInfoFromRecipe(Recipe $recipe): ?PluginsInfo {
         $mcPluginsInfo = $this->loadMchefPluginsInfo();
         if ($mcPluginsInfo && $this->checkPluginsInfoInSync($recipe, $mcPluginsInfo)) {
@@ -320,6 +342,9 @@ class Plugins extends AbstractService {
                         }
                     } else {
                         // TODO - support plugins already in a structure.
+
+                        $this->cli->info('The Moodle plugin version information is not found in the repo.');
+
                         throw new Exception('Unhandled case');
                     }
                 }
