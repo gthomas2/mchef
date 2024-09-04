@@ -202,8 +202,21 @@ class Plugins extends AbstractService {
         return $path;
     }
 
-    private function cloneGithubRepository($url, $path) {
-        $cmd = "git clone $url $path";
+    /**
+     * Clone a git repository.
+     *
+     * @param string $url
+     * @param string $branch
+     * @param string $path
+     */
+    private function cloneGithubRepository($url, $branch, $path) {
+
+        if (empty($branch)) {
+            $cmd = "git clone $url $path";
+        } else {
+            $cmd = "git clone $url --branch $branch $path";
+        }
+
         exec($cmd, $output, $returnVar);
 
         if ($returnVar != 0) {
@@ -240,8 +253,17 @@ class Plugins extends AbstractService {
             return true;
         }
         $pInfoRecipeSources = array_map(
-            function(Plugin $plugin) { return $plugin->recipeSrc; }, $pluginsInfo->plugins);
-        $recipePlugins = array_values($recipe->plugins);
+            static function(Plugin $plugin) { return $plugin->recipeSrc; }, $pluginsInfo->plugins);
+
+        $recipePlugins = array_map(
+            function($plugin) {
+
+                [$repo, ] = $this->extractRepoInfoFromPlugin($plugin);
+
+                return $repo;
+
+            }, $recipe->plugins);
+
         return empty(array_diff($pInfoRecipeSources, $recipePlugins)) && empty(array_diff($recipePlugins, $pInfoRecipeSources));
     }
 
@@ -258,12 +280,15 @@ class Plugins extends AbstractService {
         $volumes = [];
         $plugins = [];
         foreach ($recipe->plugins as $plugin) {
+
+            [$repo, $repoBranch] = $this->extractRepoInfoFromPlugin($plugin);
+
             // Only support single github hosted plugins for now.
-            if (strpos($plugin, 'https://github.com') === 0) {
+            if (strpos($repo, 'https://github.com') === 0) {
                 if ($recipe->cloneRepoPlugins) {
                     $tmpDir = sys_get_temp_dir().'/'.uniqid('', true);
 
-                    $this->cloneGithubRepository($plugin, $tmpDir);
+                    $this->cloneGithubRepository($repo, $repoBranch, $tmpDir);
                     $versionFiles = $this->findMoodleVersionFiles($tmpDir);
                     if (count($versionFiles) === 1) {
                         // Repository is a single plugin.
@@ -370,7 +395,7 @@ class Plugins extends AbstractService {
 
         return $versionFiles;
     }
-    
+
     public function getPluginByComponentName(string $pluginName, PluginsInfo $pluginsInfo): ?Plugin {
         $plugins = array_filter($pluginsInfo->plugins, function(Plugin $plugin) use ($pluginName) {
             return $pluginName === $plugin->component;
@@ -410,4 +435,27 @@ class Plugins extends AbstractService {
         }
         return $plugins;
     }
+
+    /**
+     * Extract repo info from plugin.
+     *
+     * @param mixed $plugin
+     *
+     * @return array
+     */
+    private function extractRepoInfoFromPlugin(mixed $plugin): array {
+
+        if (is_object($plugin) && empty($plugin->repo)) {
+
+            throw new Exception('Repo not set in plugin recipe');
+        }
+
+        if (is_object($plugin)) {
+
+            return [$plugin->repo, $plugin->branch];
+        }
+
+        return [$plugin, ''];
+    }
+
 }
