@@ -40,7 +40,7 @@ class Recipe extends AbstractModel {
         public ?string $vendor = null,
 
         /**
-         * @var array
+         * @var array - can be array of github urls, or {repo, branch} or local path OR frankenstyle
          */
         public ?array $plugins = null,
 

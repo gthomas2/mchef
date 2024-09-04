@@ -283,6 +283,19 @@ class Plugins extends AbstractService {
         return empty(array_diff($pInfoRecipeSources, $recipePlugins)) && empty(array_diff($recipePlugins, $pInfoRecipeSources));
     }
 
+    private function detectInstallType($plugin): string {
+        if (array($plugin) || strpos($plugin, 'https://')) {
+            return 'repo';
+        }
+        if (strpos($plugin, DIRECTORY_SEPARATOR)) {
+            return 'path';
+        }
+        if (strpos($plugin, '_')) {
+            return 'frankenstyle';
+        }
+        throw new Exception('Unsupported plugin type', $plugin);
+    }
+
     /**
      * Get plugins info from recipe.
      *
@@ -304,50 +317,58 @@ class Plugins extends AbstractService {
         $plugins = [];
         foreach ($recipe->plugins as $plugin) {
 
-            [$repo, $repoBranch] = $this->extractRepoInfoFromPlugin($plugin);
+            $pluginInstallType = $this->detectInstallType($plugin);
 
-            // Only support single github hosted plugins for now.
-            if (strpos($repo, 'https://github.com') === 0) {
-                if ($recipe->cloneRepoPlugins) {
-                    $tmpDir = sys_get_temp_dir().'/'.uniqid('', true);
+            if ($pluginInstallType === 'repo') {
+                [$repo, $repoBranch] = $this->extractRepoInfoFromPlugin($plugin);
 
-                    $this->cloneGithubRepository($repo, $repoBranch, $tmpDir);
-                    $versionFiles = $this->findMoodleVersionFiles($tmpDir);
-                    if (count($versionFiles) === 1) {
-                        // Repository is a single plugin.
-                        if (file_exists($tmpDir.'/version.php')) {
-                            $pluginName = $this->getPluginComponentFromVersionFile($tmpDir.'/version.php');
-                            $pluginPath = $this->getMoodlePluginPath($pluginName);
-                            $targetPath = str_replace('//', '/', getcwd().'/'.$pluginPath);
-                            if (!file_exists($targetPath.'/version.php')) {
-                                $this->cli->info('Moving plugin from temp folder to ' . $targetPath);
-                                if (!file_exists($targetPath)) {
-                                    mkdir($targetPath, 0755, true);
+                // Only support single github hosted plugins for now.
+                if (strpos($repo, 'https://github.com') === 0) {
+                    if ($recipe->cloneRepoPlugins) {
+                        $tmpDir = sys_get_temp_dir() . '/' . uniqid('', true);
+
+                        $this->cloneGithubRepository($repo, $repoBranch, $tmpDir);
+                        $versionFiles = $this->findMoodleVersionFiles($tmpDir);
+                        if (count($versionFiles) === 1) {
+                            // Repository is a single plugin.
+                            if (file_exists($tmpDir . '/version.php')) {
+                                $pluginName = $this->getPluginComponentFromVersionFile($tmpDir . '/version.php');
+                                $pluginPath = $this->getMoodlePluginPath($pluginName);
+                                $targetPath = str_replace('//', '/', getcwd() . '/' . $pluginPath);
+                                if (!file_exists($targetPath . '/version.php')) {
+                                    $this->cli->info('Moving plugin from temp folder to ' . $targetPath);
+                                    if (!file_exists($targetPath)) {
+                                        mkdir($targetPath, 0755, true);
+                                    }
+                                    rename($tmpDir, $targetPath);
+                                } else {
+                                    $this->cli->info('Skipping copying ' . $pluginName . ' as already present at ' . $targetPath);
+                                    // Plugin already present locally.
+                                    File::instance()->deleteDir($tmpDir);
                                 }
-                                rename($tmpDir, $targetPath);
-                            } else {
-                                $this->cli->info('Skipping copying '.$pluginName.' as already present at '.$targetPath);
-                                // Plugin already present locally.
-                                File::instance()->deleteDir($tmpDir);
+                                $volume = new Volume(...['path' => $pluginPath, 'hostPath' => $targetPath]);
+                                $volumes[] = $volume;
+                                $plugins[$pluginName] = new Plugin(
+                                    $pluginName,
+                                    $pluginPath,
+                                    $targetPath,
+                                    $volume,
+                                    $plugin
+                                );
                             }
-                            $volume = new Volume(...['path' => $pluginPath, 'hostPath' => $targetPath]);
-                            $volumes[] = $volume;
-                            $plugins[$pluginName] = new Plugin(
-                                $pluginName,
-                                $pluginPath,
-                                $targetPath,
-                                $volume,
-                                $plugin
-                            );
+                        } else {
+                            // TODO - support plugins already in a structure.
+
+                            $this->cli->info('The Moodle plugin version information is not found in the repo.');
+
+                            throw new Exception('Unhandled case');
                         }
-                    } else {
-                        // TODO - support plugins already in a structure.
-
-                        $this->cli->info('The Moodle plugin version information is not found in the repo.');
-
-                        throw new Exception('Unhandled case');
                     }
                 }
+            } else if ($pluginInstallType === 'path') {
+                // Handle path installation
+            } else if ($pluginInstallType === 'frankenstyle') {
+                // Handle frankenstyle installation
             }
         }
         // Cache to file.
