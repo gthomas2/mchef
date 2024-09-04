@@ -18,6 +18,10 @@ class MChefCLI extends CLI {
      * @var \App\Service\Main;
      */
     public $main;
+    /**
+     * @var \App\Service\Dependencies;
+     */
+    public $depService;
 
     private function registerCommands(Options $options) {
         if (strpos(__FILE__, 'bin/mchef.php') !== false) {
@@ -38,10 +42,10 @@ class MChefCLI extends CLI {
     }
 
     protected function setup(Options $options) {
-        if (intval(explode('.', phpversion(), 2)[0]) < 8) {
-            $this->error('PHP 8.0+ supported - you are using '.phpversion('tidy'));
-            die;
-        }
+        // Run dependency checks. If one of them fails, program will die()
+        $this->depService = \App\Service\Dependencies::instance($this);
+        $this->depService->check();
+        
         $options->setHelp('Facilitates the creation of moodle docker instances with custom configurations.');
         $this->registerCommands($options);
         $options->registerArgument('recipe', 'File location of recipe', false);
