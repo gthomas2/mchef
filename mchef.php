@@ -56,10 +56,6 @@ class MChefCLI extends CLI {
         $this->depService = \App\Service\Dependencies::instance($this);
         $this->depService->check();
         
-        // Check if selected port is available
-        $this->dockerService = \App\Service\Docker::instance($this);
-        //~ $this->dockerService->checkPortAvailable(80) || die;
-        
         $options->setHelp('Facilitates the creation of moodle docker instances with custom configurations.');
         $this->registerCommands($options);
         $options->registerArgument('recipe', 'File location of recipe', false);
