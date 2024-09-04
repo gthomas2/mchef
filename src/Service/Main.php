@@ -65,7 +65,7 @@ class Main extends AbstractService {
     private function startDocker($ymlPath) {
         $this->cli->notice('Starting docker containers');
         // @Todo - force-recreate and --build need to be flags that get passed in, not hard coded.
-        $cmd = "docker-compose -f $ymlPath up -d --force-recreate --build";
+        $cmd = "docker compose -f $ymlPath up -d --force-recreate --build";
         $this->execPassthru($cmd, "Error starting docker containers - try pruning with 'docker builder prune' OR 'docker system prune' (note 'docker system prune' will destroy all non running container images)");
 
         // @Todo - Add code here to check docker ps for expected running containers.
