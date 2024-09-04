@@ -48,10 +48,17 @@ MChef is a command-line tool designed to manage and automate various tasks relat
 
 ## Usage
 
-To use MChef, run the following command:
+You should create a folder for hosting your project.
+In this folder you will need a recipe file - see the example-mrecipe.json file
+To use MChef, run the following command in your project folder:
 
 ```sh
 mchef.php [command] [options]
+```
+
+For example - if you have a recipe called recipe.json in your project folder you would run:
+```sh
+mchef.php recipe.json
 ```
 
 To see an overview of commands, run:

@@ -3,9 +3,10 @@
   "moodleTag": "v4.1.0",
   "phpVersion": "8.0",
   "plugins": [
+    "https://github.com/gthomas2/moodle-filter_imageopt",
     {
-      "repo": "https://github.com/gthomas2/moodle-moodle-filter_imageopt",
-      "branch": "main"
+      "repo": "https://github.com/gthomas2/moodle-filter_ally",
+      "branch": "MODOLE_401_STABLE"
     }
   ],
   "containerPrefix": "imageopt",
