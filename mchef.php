@@ -22,6 +22,10 @@ class MChefCLI extends CLI {
      * @var \App\Service\Dependencies;
      */
     public $depService;
+    /**
+     * @var \App\Service\Docker;
+     */
+    public $dockerService;
 
     private function registerCommands(Options $options) {
         if (strpos(__FILE__, 'bin/mchef.php') !== false) {
@@ -45,6 +49,10 @@ class MChefCLI extends CLI {
         // Run dependency checks. If one of them fails, program will die()
         $this->depService = \App\Service\Dependencies::instance($this);
         $this->depService->check();
+        
+        // Check if selected port is available
+        $this->dockerService = \App\Service\Docker::instance($this);
+        //~ $this->dockerService->checkPortAvailable(80) || die;
         
         $options->setHelp('Facilitates the creation of moodle docker instances with custom configurations.');
         $this->registerCommands($options);

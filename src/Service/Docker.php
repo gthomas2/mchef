@@ -168,4 +168,18 @@ class Docker extends AbstractService {
         $onErrorMsg = 'Failed to get container running status for '.$containerName;
         return $this->exec($cmd, $onErrorMsg) === 'true';
     }
+
+    public function checkPortAvailable(int $port): bool {
+      $containers = $this->getDockerContainers(true);
+        for($i=0;$i<count($containers);$i++) {
+          $containerSpecs = json_decode($this->exec('docker inspect --format json '.$containers[$i]->containerId));
+          if($containerSpecs[0]->HostConfig->PortBindings) {
+             if(property_exists($containerSpecs[0]->HostConfig->PortBindings, $port.'/tcp')) {
+              $this->cli->error('Portbinding '.$port.'/tcp'.' is already in use (containerId: '.$containers[$i]->containerId.')');
+              return false;
+            }
+          }
+        }
+      return true;
+    }
 }
