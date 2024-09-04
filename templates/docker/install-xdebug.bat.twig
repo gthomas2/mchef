@@ -1,0 +1,36 @@
+@echo off
+
+:: Check if PHP has Xdebug installed and loaded
+php -v | findstr "Xdebug" >nul
+if %errorlevel% equ 0 (
+    echo PHP Xdebug already installed
+    exit /b 0
+)
+
+:: Check if Xdebug is installed via PECL
+pecl list | findstr "xdebug" >nul
+if %errorlevel% equ 0 (
+    echo PHP Xdebug already installed but not loaded
+) else (
+    pecl install xdebug
+)
+
+:: Create log directory if it doesn't exist
+if not exist "C:\var\log\xdebug" (
+    mkdir "C:\var\log\xdebug"
+    icacls "C:\var\log\xdebug" /grant Everyone:F /t
+)
+
+:: Find the PHP extensions directory and create the Xdebug configuration
+for /d %%D in (C:\php\ext\*) do set extdir=%%~nxD
+(
+    echo zend_extension=C:\php\ext\%extdir%\xdebug.dll
+    echo xdebug.output_dir=C:\var\log\xdebug
+    echo xdebug.mode=%mode%
+    echo xdebug.start_with_request=trigger
+    echo xdebug.client_host=host.docker.internal
+    echo xdebug.client_port=9003
+    echo xdebug.show_error_trace=1
+) > C:\php\conf.d\php-xdebug.ini
+
+exit /b 0

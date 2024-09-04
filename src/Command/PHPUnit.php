@@ -35,9 +35,9 @@ class PHPUnit extends AbstractCommand {
 
         $this->cli->notice('Initializing PHPUnit');
         $moodleContainer = $mainService->getDockerMoodleContainerName();
-        $cmd = 'docker exec -it '.$moodleContainer.' php /var/www/html/moodle/admin/tool/phpunit/cli/init.php';
+        $cmd = 'docker exec -it '.$moodleContainer.' php '.DIRECTORY_SEPARATOR.'var'.DIRECTORY_SEPARATOR.'www'.DIRECTORY_SEPARATOR.'html'.DIRECTORY_SEPARATOR.'moodle'.DIRECTORY_SEPARATOR.'admin'.DIRECTORY_SEPARATOR.'tool'.DIRECTORY_SEPARATOR.'phpunit'.DIRECTORY_SEPARATOR.'cli'.DIRECTORY_SEPARATOR.'init.php';
         $this->execStream($cmd, 'Failed to initialize phpunit');
-        $runCode = '/var/www/html/moodle/vendor/bin/phpunit';
+        $runCode = ''.DIRECTORY_SEPARATOR.'var'.DIRECTORY_SEPARATOR.'www'.DIRECTORY_SEPARATOR.'html'.DIRECTORY_SEPARATOR.'moodle'.DIRECTORY_SEPARATOR.'vendor'.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'phpunit';
 
         $groups = $options->getOpt('group');
         $testsuite = $options->getOpt('testsuite');
@@ -57,7 +57,7 @@ class PHPUnit extends AbstractCommand {
                 }
                 $pluginTestPaths = [];
                 foreach ($plugins as $plugin) {
-                    $pluginTestPaths[] = $plugin->path.'/tests';
+                    $pluginTestPaths[] = $plugin->path.''.DIRECTORY_SEPARATOR.'tests';
                 }
             } else if (!empty($groups)) {
                 $runMsg .= " for groups $groups";
@@ -69,7 +69,7 @@ class PHPUnit extends AbstractCommand {
                 $runCode .= ' '.implode(' ', $pluginTestPaths);
             }
         } else {
-            $runCode .= ' /var/www/html/moodle/ ';
+            $runCode .= ' '.DIRECTORY_SEPARATOR.'var'.DIRECTORY_SEPARATOR.'www'.DIRECTORY_SEPARATOR.'html'.DIRECTORY_SEPARATOR.'moodle'.DIRECTORY_SEPARATOR.' ';
             $runCode .= ' --testsuite='.$testsuite;
             $runMsg .= ' for testsuite '.$testsuite;
         }

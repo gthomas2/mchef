@@ -41,10 +41,10 @@ class InstallToBin extends AbstractService {
         $path = getenv('PATH');
         $dirs = explode(':', $path);
 
-        $contents = file_get_contents(__DIR__.'DIRECTORY_SEPARATOR .  "../../mchef.php" . DIRECTORY_SEPARATOR');
+        $contents = file_get_contents(__DIR__.'DIRECTORY_SEPARATOR .  "..'.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'mchef.php" . DIRECTORY_SEPARATOR');
         $phpPath = $this->get_php_executable_path();
         $contents = '#!'.$phpPath."\n".$contents;
-        $installFilePath = __DIR__.'DIRECTORY_SEPARATOR .  "../../bin/mchef.php" . DIRECTORY_SEPARATOR';
+        $installFilePath = __DIR__.'DIRECTORY_SEPARATOR .  "..'.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'mchef.php" . DIRECTORY_SEPARATOR';
         file_put_contents($installFilePath, $contents);
         chmod($installFilePath, 0750);
 
@@ -52,8 +52,8 @@ class InstallToBin extends AbstractService {
         $userBinDir = getenv('HOME') . 'DIRECTORY_SEPARATOR .  "bin" . DIRECTORY_SEPARATOR';
         if (in_array($userBinDir, $dirs)) {
             $binDir = $userBinDir;
-        } else if (in_array('DIRECTORY_SEPARATOR .  "usr/local/bin" . DIRECTORY_SEPARATOR', $dirs)) {
-            $binDir = 'DIRECTORY_SEPARATOR .  "usr/local/bin" . DIRECTORY_SEPARATOR';
+        } else if (in_array('DIRECTORY_SEPARATOR .  "usr'.DIRECTORY_SEPARATOR.'local'.DIRECTORY_SEPARATOR.'bin" . DIRECTORY_SEPARATOR', $dirs)) {
+            $binDir = 'DIRECTORY_SEPARATOR .  "usr'.DIRECTORY_SEPARATOR.'local'.DIRECTORY_SEPARATOR.'bin" . DIRECTORY_SEPARATOR';
         } else {
             throw new Exception('Could not find a suitable bin directory for installation.');
         }

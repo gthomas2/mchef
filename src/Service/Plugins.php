@@ -22,178 +22,178 @@ class Plugins extends AbstractService {
 
         switch ($type) {
             case 'assignfeedback':
-                $path = '/mod/assign/feedback/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'mod'.DIRECTORY_SEPARATOR.'assign'.DIRECTORY_SEPARATOR.'feedback'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'antivirus':
-                $path = '/lib/antivirus/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'lib'.DIRECTORY_SEPARATOR.'antivirus'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'assignsubmission':
-                $path = '/mod/assign/submission/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'mod'.DIRECTORY_SEPARATOR.'assign'.DIRECTORY_SEPARATOR.'submission'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'atto':
-                $path = '/lib/editor/atto/plugins/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'lib'.DIRECTORY_SEPARATOR.'editor'.DIRECTORY_SEPARATOR.'atto'.DIRECTORY_SEPARATOR.'plugins'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'auth':
-                $path = '/auth/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'auth'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'availability':
-                $path = '/availability/condition/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'availability'.DIRECTORY_SEPARATOR.'condition'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'block':
-                $path = '/blocks/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'blocks'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'booktool':
-                $path = '/mod/book/tool/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'mod'.DIRECTORY_SEPARATOR.'book'.DIRECTORY_SEPARATOR.'tool'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'cachelock':
-                $path = '/cache/locks/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'cache'.DIRECTORY_SEPARATOR.'locks'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'cachestore':
-                $path = '/cache/stores/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'cache'.DIRECTORY_SEPARATOR.'stores'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'calendartype':
-                $path = '/calendar/type/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'calendar'.DIRECTORY_SEPARATOR.'type'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'contenttype':
-                $path = '/contentbank/contenttype/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'contentbank'.DIRECTORY_SEPARATOR.'contenttype'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'coursereport':
-                $path = '/course/report/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'course'.DIRECTORY_SEPARATOR.'report'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'customfield':
-                $path = '/customfield/field/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'customfield'.DIRECTORY_SEPARATOR.'field'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'datafield':
-                $path = '/mod/data/field/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'mod'.DIRECTORY_SEPARATOR.'data'.DIRECTORY_SEPARATOR.'field'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'dataformat':
-                $path = '/dataformat/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'dataformat'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'datapreset':
-                $path = '/mod/data/preset/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'mod'.DIRECTORY_SEPARATOR.'data'.DIRECTORY_SEPARATOR.'preset'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'editor':
-                $path = '/lib/editor/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'lib'.DIRECTORY_SEPARATOR.'editor'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'enrol':
-                $path = '/enrol/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'enrol'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'fileconverter':
-                $path = '/files/converter/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'files'.DIRECTORY_SEPARATOR.'converter'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'filter':
-                $path = '/filter/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'filter'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'format':
-                $path = '/course/format/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'course'.DIRECTORY_SEPARATOR.'format'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'forumreport':
-                $path = '/mod/forum/report/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'mod'.DIRECTORY_SEPARATOR.'forum'.DIRECTORY_SEPARATOR.'report'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'gradeexport':
-                $path = '/grade/export/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'grade'.DIRECTORY_SEPARATOR.'export'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'gradeimport':
-                $path = '/grade/import/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'grade'.DIRECTORY_SEPARATOR.'import'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'gradereport':
-                $path = '/grade/report/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'grade'.DIRECTORY_SEPARATOR.'report'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'gradingform':
-                $path = '/grade/grading/form/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'grade'.DIRECTORY_SEPARATOR.'grading'.DIRECTORY_SEPARATOR.'form'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'h5plib':
-                $path = '/h5p/h5plib/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'h5p'.DIRECTORY_SEPARATOR.'h5plib'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'local':
-                $path = '/local/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'local'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'logstore':
-                $path = '/admin/tool/log/store/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'admin'.DIRECTORY_SEPARATOR.'tool'.DIRECTORY_SEPARATOR.'log'.DIRECTORY_SEPARATOR.'store'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'ltiservice':
-                $path = '/mod/lti/service/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'mod'.DIRECTORY_SEPARATOR.'lti'.DIRECTORY_SEPARATOR.'service'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'ltisource':
-                $path = '/mod/lti/source/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'mod'.DIRECTORY_SEPARATOR.'lti'.DIRECTORY_SEPARATOR.'source'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'media':
-                $path = '/media/player/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'media'.DIRECTORY_SEPARATOR.'player'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'message':
-                $path = '/message/output/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'message'.DIRECTORY_SEPARATOR.'output'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'mlbackend':
-                $path = '/lib/mlbackend/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'lib'.DIRECTORY_SEPARATOR.'mlbackend'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'mnetservice':
-                $path = '/mnet/service/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'mnet'.DIRECTORY_SEPARATOR.'service'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'mod':
-                $path = '/mod/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'mod'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'plagiarism':
-                $path = '/plagiarism/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'plagiarism'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'portfolio':
-                $path = '/portfolio/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'portfolio'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'profilefield':
-                $path = '/user/profile/field/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'user'.DIRECTORY_SEPARATOR.'profile'.DIRECTORY_SEPARATOR.'field'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'qbank':
-                $path = '/question/bank/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'question'.DIRECTORY_SEPARATOR.'bank'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'qbehaviour':
-                $path = '/question/behaviour/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'question'.DIRECTORY_SEPARATOR.'behaviour'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'qformat':
-                $path = '/question/format/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'question'.DIRECTORY_SEPARATOR.'format'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'qtype':
-                $path = '/question/type/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'question'.DIRECTORY_SEPARATOR.'type'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'quiz':
-                $path = '/mod/quiz/report/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'mod'.DIRECTORY_SEPARATOR.'quiz'.DIRECTORY_SEPARATOR.'report'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'quizaccess':
-                $path = '/mod/quiz/accessrule/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'mod'.DIRECTORY_SEPARATOR.'quiz'.DIRECTORY_SEPARATOR.'accessrule'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'report':
-                $path = '/report/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'report'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'repository':
-                $path = '/repository/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'repository'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'scormreport':
-                $path = '/mod/scorm/report/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'mod'.DIRECTORY_SEPARATOR.'scorm'.DIRECTORY_SEPARATOR.'report'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'search':
-                $path = '/search/engine/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'search'.DIRECTORY_SEPARATOR.'engine'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'theme':
-                $path = '/theme/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'theme'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'tiny':
-                $path = '/lib/editor/tiny/plugins/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'lib'.DIRECTORY_SEPARATOR.'editor'.DIRECTORY_SEPARATOR.'tiny'.DIRECTORY_SEPARATOR.'plugins'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'tinymce':
-                $path = '/lib/editor/tinymce/plugins/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'lib'.DIRECTORY_SEPARATOR.'editor'.DIRECTORY_SEPARATOR.'tinymce'.DIRECTORY_SEPARATOR.'plugins'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'tool':
-                $path = '/admin/tool/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'admin'.DIRECTORY_SEPARATOR.'tool'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'webservice':
-                $path = '/webservice/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'webservice'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'workshopallocation':
-                $path = '/mod/workshop/allocation/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'mod'.DIRECTORY_SEPARATOR.'workshop'.DIRECTORY_SEPARATOR.'allocation'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'workshopeval':
-                $path = '/mod/workshop/eval/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'mod'.DIRECTORY_SEPARATOR.'workshop'.DIRECTORY_SEPARATOR.'eval'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
             case 'workshopform':
-                $path = '/mod/workshop/form/' . implode('/', $parts);
+                $path = ''.DIRECTORY_SEPARATOR.'mod'.DIRECTORY_SEPARATOR.'workshop'.DIRECTORY_SEPARATOR.'form'.DIRECTORY_SEPARATOR.'' . implode(''.DIRECTORY_SEPARATOR.'', $parts);
                 break;
         }
         if (empty($path)) {
@@ -214,7 +214,7 @@ class Plugins extends AbstractService {
     public function getMchefPluginsInfoPath(): string {
         $mainService = (Main::instance($this->cli));
         $chefPath = $mainService->getChefPath();
-        $pluginsInfoPath = $chefPath.'/pluginsinfo.object';
+        $pluginsInfoPath = $chefPath.''.DIRECTORY_SEPARATOR.'pluginsinfo.object';
         return $pluginsInfoPath;
     }
 
@@ -261,17 +261,17 @@ class Plugins extends AbstractService {
             // Only support single github hosted plugins for now.
             if (strpos($plugin, 'https://github.com') === 0) {
                 if ($recipe->cloneRepoPlugins) {
-                    $tmpDir = sys_get_temp_dir().'/'.uniqid('', true);
+                    $tmpDir = sys_get_temp_dir().''.DIRECTORY_SEPARATOR.''.uniqid('', true);
 
                     $this->cloneGithubRepository($plugin, $tmpDir);
                     $versionFiles = $this->findMoodleVersionFiles($tmpDir);
                     if (count($versionFiles) === 1) {
                         // Repository is a single plugin.
-                        if (file_exists($tmpDir.'/version.php')) {
-                            $pluginName = $this->getPluginComponentFromVersionFile($tmpDir.'/version.php');
+                        if (file_exists($tmpDir.''.DIRECTORY_SEPARATOR.'version.php')) {
+                            $pluginName = $this->getPluginComponentFromVersionFile($tmpDir.''.DIRECTORY_SEPARATOR.'version.php');
                             $pluginPath = $this->getMoodlePluginPath($pluginName);
-                            $targetPath = str_replace('//', '/', getcwd().'/'.$pluginPath);
-                            if (!file_exists($targetPath.'/version.php')) {
+                            $targetPath = str_replace('//', ''.DIRECTORY_SEPARATOR.'', getcwd().''.DIRECTORY_SEPARATOR.''.$pluginPath);
+                            if (!file_exists($targetPath.''.DIRECTORY_SEPARATOR.'version.php')) {
                                 $this->cli->info('Moving plugin from temp folder to ' . $targetPath);
                                 if (!file_exists($targetPath)) {
                                     mkdir($targetPath, 0755, true);
@@ -305,7 +305,7 @@ class Plugins extends AbstractService {
         if ($chefPath === null) {
             // No chef path, create one if we are at same level as recipe.
             if (realpath(dirname($recipe->getRecipePath())) === realpath(getcwd())) {
-                $chefPath = realpath(dirname($recipe->getRecipePath())).'/.mchef';
+                $chefPath = realpath(dirname($recipe->getRecipePath())).''.DIRECTORY_SEPARATOR.'.mchef';
             }
         }
         if (!file_exists($chefPath)) {

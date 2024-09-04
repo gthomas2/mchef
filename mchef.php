@@ -2,10 +2,10 @@
 
 error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
 
-if (stripos(__FILE__, 'bin/')) {
-    require __DIR__ . '/../vendor/autoload.php';
+if (stripos(__FILE__, 'bin'.DIRECTORY_SEPARATOR.'')) {
+    require __DIR__ . ''.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'vendor'.DIRECTORY_SEPARATOR.'autoload.php';
 } else {
-    require __DIR__ . '/vendor/autoload.php';
+    require __DIR__ . ''.DIRECTORY_SEPARATOR.'vendor'.DIRECTORY_SEPARATOR.'autoload.php';
 }
 
 use splitbrain\phpcli\CLI;
@@ -20,10 +20,10 @@ class MChefCLI extends CLI {
     public $main;
 
     private function registerCommands(Options $options) {
-        if (strpos(__FILE__, 'bin/mchef.php') !== false) {
-            $files = scandir(__DIR__.'/../src/Command');
+        if (strpos(__FILE__, 'bin'.DIRECTORY_SEPARATOR.'mchef.php') !== false) {
+            $files = scandir(__DIR__.''.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Command');
         } else {
-            $files = scandir(__DIR__.'/src/Command');
+            $files = scandir(__DIR__.''.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Command');
         }
 
         $files = array_filter($files, function($file) {

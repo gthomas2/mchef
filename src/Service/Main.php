@@ -146,10 +146,25 @@ class Main extends AbstractService {
         $this->cli->success('Network configuration successful');
     }
 
+    public function isWindows():bool{
+        return strtoupper(substr(PHP_OS,0,3)) === 'WIN';
+    }
+
+    public function hostPath() : string
+    {
+        if ($this->isWindows()){
+            return 'C:\Windows\System32\drivers\etc\hosts';
+        } 
+        else {
+            return '/etc./hosts';
+        }
+    }
+
+
     private function updateHostHosts(Recipe $recipe): void {
         if ($recipe->updateHostHosts) {
             try {
-                $hosts = file('/etc/hosts');
+                $hosts = file($this->hostPath());
             } catch (\Exception $e) {
                 $this->cli->error('Failed to update host hosts file');
             }
@@ -172,7 +187,7 @@ class Main extends AbstractService {
         });
 
         if (empty($toAdd)) {
-            $this->cli->info('No hosts to add to host /etc/hosts file');
+            $this->cli->info("No hosts to add to host $destHostsFile file");
             return;
         }
 
@@ -190,22 +205,24 @@ class Main extends AbstractService {
         $tmpHostsFile = tempnam(sys_get_temp_dir(), "etc_hosts");
         file_put_contents($tmpHostsFile, $hostsContent);
 
-        $this->cli->notice('Updating /etc/hosts - may need root password.');
-        $cmd = "sudo cp -f $tmpHostsFile /etc/hosts";
+        $destHostsFile = $this->hostPath();
+
+        $this->cli->notice("Updating $destHostsFile - may need root password.");
+        $cmd = "copy /Y \"$tmpHostsFile\" \"$destHostsFile\"";
         exec($cmd, $output, $returnVar);
 
         if ($returnVar != 0) {
-            throw new Exception("Error updating /etc/hosts file");
+            throw new Exception("Error updating $destHostsFile file");
         }
 
-        $hostsContent = file_get_contents('/etc/hosts');
+        $hostsContent = file_get_contents($destHostsFile);
         foreach ($toAdd as $toCheck) {
             if (stripos($hostsContent, $toCheck) === false) {
-                throw new Exception('Failed to update /etc/hosts');
+                throw new Exception("Failed to update $destHostsFile");
             }
         }
 
-        $this->cli->success('Successfully updated /etc/hosts');
+        $this->cli->success("Successfully updated $destHostsFile");
     }
 
     private function parseRecipe(string $recipeFilePath): Recipe {
