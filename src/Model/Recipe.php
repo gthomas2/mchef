@@ -115,6 +115,11 @@ class Recipe extends AbstractModel {
         public ?string $dbHostPort = null,
 
         /**
+         * @var boolean|null - wheter to install Moodle or not directly
+         */
+        public bool $installMoodledb = true,
+
+        /**
          * Prefix for containers.
          * Default is 'mc'.
          * Setting this to 'fred' would result in the following containers:

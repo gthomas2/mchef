@@ -144,6 +144,35 @@ class Main extends AbstractService {
         $this->exec($cmd, "Failed to connect $moodleContainer to $networkName");
 
         $this->cli->success('Network configuration successful');
+
+        if ($recipe->installMoodledb) {
+            // Try installing The DB
+            $this->cli->notice('Try installing MoodleDB');
+
+            $dbnotready = true;
+            // Todo differentiate between different databases
+            $dbCheckCmd = 'docker exec ' . $dbContainer . ' psql -U ' . $recipe->dbUser . ' -d ' . $recipe->dbName . ' -c "SELECT 1" > /dev/null 2>&1';
+
+            while ($dbnotready) {
+                exec($dbCheckCmd, $output, $returnVar);
+                if ($returnVar === 0) {
+                    $dbnotready = false;
+                }
+                $this->cli->notice('Waiting for db to be ready');
+                sleep(1);
+            }
+            $this->cli->notice('DB ready!');
+
+            // TODO check if DB exist already and ask if we schould overwrite
+
+            $this->cli->notice('Installing DB');
+            $installoptions = '/var/www/html/moodle/admin/cli/install_database.php --lang=de --adminpass=123456 --adminemail=admin@example.com --agree-license --fullname=mchefMOODLE --shortname=mchefMOODLE';
+            $cmd = 'docker exec '.$moodleContainer.' php '.$installoptions;
+            $this->execPassthru($cmd);
+        }
+
+        // Print out wwwroot
+        $this->cli->notice('Installation finished. Your mchef-Moodle is now available at: ' . $recipe->wwwRoot );
     }
 
     private function updateHostHosts(Recipe $recipe): void {
