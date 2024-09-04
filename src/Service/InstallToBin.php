@@ -2,10 +2,12 @@
 
 namespace App\Service;
 
+use App\Traits\ExecTrait;
 use splitbrain\phpcli\Exception;
 use splitbrain\phpcli\CLI;
 
 class InstallToBin extends AbstractService {
+    use ExecTrait;
 
     final public static function instance(CLI $cli): InstallToBin {
         return self::setup_instance($cli);
