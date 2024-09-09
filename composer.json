@@ -1,6 +1,6 @@
 {
     "require": {
-        "symfony/console": "^3.4",
+        "symfony/console": "^5.4",
         "splitbrain/php-cli": "^1.2",
         "twig/twig": "^3.0"
     },
