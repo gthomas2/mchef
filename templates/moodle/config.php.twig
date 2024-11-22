@@ -10,7 +10,7 @@ $CFG->dbhost    = getenv('DB_HOST');
 $CFG->dbname    = getenv('DB_NAME');
 $CFG->dbuser    = getenv('DB_USER');
 $CFG->dbpass    = getenv('DB_PASS');
-$CFG->prefix    = 'mdl_';
+$CFG->prefix    = 'mdl_'; // Hardcoded for now
 
 if ($CFG->dbtype === 'mysqli') {
     $CFG->dblibrary = 'native';

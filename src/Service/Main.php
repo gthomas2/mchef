@@ -154,7 +154,6 @@ class Main extends AbstractService {
             $this->cli->notice('Try installing MoodleDB');
 
             $dbnotready = true;
-            // Todo differentiate between different databases
             $dbCheckCmd = 'docker exec ' . $dbContainer . ' psql -U ' . $recipe->dbUser . ' -d ' . $recipe->dbName . ' -c "SELECT 1" > /dev/null 2>&1';
 
             while ($dbnotready) {
@@ -162,38 +161,46 @@ class Main extends AbstractService {
                 if ($returnVar === 0) {
                     $dbnotready = false;
                 }
-                $this->cli->notice('Waiting for db to be ready');
+                $this->cli->notice('Waiting for DB '.$dbContainer.' to be ready');
                 sleep(1);
             }
-            $this->cli->notice('DB ready!');
+            $this->cli->notice('DB '.$dbContainer.' ready!');
 
-            // TODO check if DB exist already and ask if we schould overwrite
+            $dbSchemaInstalledCmd = 'docker exec ' . $dbContainer . ' psql -U ' . $recipe->dbUser . ' -d ' . $recipe->dbName . ' -c "SELECT * FROM mdl_course" > /dev/null 2>&1';
+            exec($dbSchemaInstalledCmd, $output, $returnVar);
+            $dbSchemaInstalled = $returnVar === 0;
+            $doDbInstall = !$dbSchemaInstalled;
 
+            if (!$doDbInstall) {
+                $this->cli->notice('DB already installed. Skipping installation');
+            } else {
+                $this->cli->notice('Installing DB');
+                $installoptions =
+                    '/var/www/html/moodle/admin/cli/install_database.php --lang=de --adminpass=123456 --adminemail=admin@example.com --agree-license --fullname=mchef-MOODLE --shortname=mchefMOODLE';
+                $cmdinstall = 'docker exec ' . $moodleContainer . ' php ' . $installoptions;
 
-            $this->cli->notice('Installing DB');
-            $installoptions = '/var/www/html/moodle/admin/cli/install_database.php --lang=de --adminpass=123456 --adminemail=admin@example.com --agree-license --fullname=mchef-MOODLE --shortname=mchefMOODLE';
-            $cmdinstall = 'docker exec '.$moodleContainer.' php '.$installoptions;
-
-            // Try to install
-            try {
-                $this->execPassthru($cmdinstall);
-            } catch (\Exception $e) {
-                // Installation failed, ask if DB should be dropped?
-                $this->cli->error($e->getMessage());
-                $overwrite = readline("Do you want to delete the db and install fresh? (yes/no): ");
-
-                if (strtolower(trim($overwrite)) === 'yes') {
-                    $this->cli->notice('Overwriting the existing Moodle database...');
-                    // Drop all DB Tables in public
-                    $dbdeletecmd = 'docker exec ' . $dbContainer . ' psql -U ' . $recipe->dbUser . ' -d ' . $recipe->dbName . ' -c "DO \$\$ DECLARE row RECORD; BEGIN FOR row IN (SELECT tablename FROM pg_tables WHERE schemaname = \'public\') LOOP EXECUTE \'DROP TABLE IF EXISTS public.\' || quote_ident(row.tablename); END LOOP; END \$\$;"';
-
-                    exec($dbdeletecmd, $outpup, $return);
-
-                    // Do the installation again, should work now
+                // Try to install
+                try {
                     $this->execPassthru($cmdinstall);
+                } catch (\Exception $e) {
+                    // Installation failed, ask if DB should be dropped?
+                    $this->cli->error($e->getMessage());
+                    $overwrite = readline("Do you want to delete the db and install fresh? (yes/no): ");
 
-                } else {
-                    $this->cli->notice('Skipping Moodle database installation.');
+                    if (strtolower(trim($overwrite)) === 'yes') {
+                        $this->cli->notice('Overwriting the existing Moodle database...');
+                        // Drop all DB Tables in public
+                        $dbdeletecmd = 'docker exec ' . $dbContainer . ' psql -U ' . $recipe->dbUser . ' -d ' . $recipe->dbName .
+                            ' -c "DO \$\$ DECLARE row RECORD; BEGIN FOR row IN (SELECT tablename FROM pg_tables WHERE schemaname = \'public\') LOOP EXECUTE \'DROP TABLE IF EXISTS public.\' || quote_ident(row.tablename); END LOOP; END \$\$;"';
+
+                        exec($dbdeletecmd, $outpup, $return);
+
+                        // Do the installation again, should work now
+                        $this->execPassthru($cmdinstall);
+
+                    } else {
+                        $this->cli->notice('Skipping Moodle database installation.');
+                    }
                 }
             }
             $this->cli->notice('Moodle database installed successfully.');
@@ -207,7 +214,7 @@ class Main extends AbstractService {
       $dockerService = Docker::instance($this->cli);
       return $dockerService->checkPortAvailable($recipe->port);
     }
-    
+
     private function updateHostHosts(Recipe $recipe): void {
         if ($recipe->updateHostHosts) {
             try {
@@ -332,7 +339,7 @@ class Main extends AbstractService {
         }
         $recipe = $this->parseRecipe($recipeFilePath);
         $this->checkPortBinding($recipe) || die();
-        
+
         if ($recipe->includeBehat) {
             $behatDumpPath = getcwd().'/_behat_dump';
             if (!file_exists($behatDumpPath)) {

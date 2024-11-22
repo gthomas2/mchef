@@ -307,7 +307,7 @@ class Plugins extends AbstractService {
             [$repo, $repoBranch] = $this->extractRepoInfoFromPlugin($plugin);
 
             // Only support single github hosted plugins for now.
-            if (strpos($repo, 'https://github.com') === 0) {
+            if (strpos($repo, 'https://github.com') === 0 || strpos($repo, 'git@github.com') === 0) {
                 if ($recipe->cloneRepoPlugins) {
                     $tmpDir = sys_get_temp_dir().'/'.uniqid('', true);
 
