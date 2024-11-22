@@ -75,3 +75,23 @@ mchef.php example-mrecipe.json
 
 Search in  "/src/Model/Recipe.php" for all the possible ingredients of your recipe.
 Enjoy cooking.
+
+## Behat
+
+### Running a behat test without viewing progress (headless)
+
+```sh
+mchef.php behat
+```
+
+### To run and view a behat test in progress
+
+You would do this if you needed to debug what it was doing - e.g when you have an "And I pause" step.
+Start the behat test as follows:
+
+```sh
+mchef.php behat --profile=chrome
+```
+
+To view the test running, open the following URL
+http://localhost:7900/?autoconnect=1&resize=scale&password=secret
