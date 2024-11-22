@@ -60,7 +60,7 @@ class Recipe extends AbstractModel {
         public string $hostProtocol = 'http',
 
         /**
-         * @var int - web port (leave blank for default of 8080).
+         * @var int - web port (leave blank for default of 80).
          */
         public ?int $port = null,
 
