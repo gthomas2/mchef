@@ -92,9 +92,9 @@ class Main extends AbstractService {
         $this->cli->success('All containers have been started');
     }
 
-    public function stopContainers(): void {
+    public function stopContainers(?Recipe $recipe = null): void {
         $this->cli->notice('Stopping containers');
-        $recipe = $this->getRecipe();
+        $recipe = $recipe ?? $this->getRecipe();
         $moodleContainer = $this->getDockerMoodleContainerName();
         $dbContainer = $this->getDockerDatabaseContainerName();
         $behatContainer = $recipe->containerPrefix.'-behat';
@@ -344,6 +344,7 @@ class Main extends AbstractService {
             );
         }
         $recipe = $this->parseRecipe($recipeFilePath);
+        $this->stopContainers($recipe);
         $this->checkPortBinding($recipe) || die();
 
         if ($recipe->includeBehat) {
