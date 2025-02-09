@@ -42,17 +42,9 @@ class Database extends AbstractCommand {
         $dockerService->execute($dbContainer, "sh -c \"export PGPASSWORD=$recipe->dbPassword\"");
         $dbName = $this->getDbName();
         try {
-            $cmd = <<<CMD
-                    DO $$ DECLARE
-                    rec RECORD;
-                    BEGIN
-                    FOR rec IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
-                    EXECUTE 'DROP TABLE IF EXISTS ' || rec.tablename || ' CASCADE';
-                    END LOOP;
-                    END $$;
-CMD;
-            $cmdProcessed = escapeshellarg(str_replace("\n", ' ', $cmd));
-            $dockerService->execute($dbContainer, "psql -U $recipe->dbUser -d $dbName -c $cmdProcessed");
+            $dbDelCmd = 'psql -U ' . $recipe->dbUser . ' -d ' . $recipe->dbName .
+                ' -c "DO \$\$ DECLARE row RECORD; BEGIN FOR row IN (SELECT tablename FROM pg_tables WHERE schemaname = \'public\') LOOP EXECUTE \'DROP TABLE IF EXISTS public.\' || quote_ident(row.tablename); END LOOP; END \$\$;"';
+            $dockerService->execute($dbContainer, $dbDelCmd);
         } catch (ExecFailed) {
             // Delete them one at a time.
             $cmd = "SELECT table_name FROM information_schema.tables WHERE table_type='BASE TABLE' AND table_schema='public'";
