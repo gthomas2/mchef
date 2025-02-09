@@ -105,15 +105,21 @@ class Main extends AbstractService {
 
         $dockerService = Docker::instance($this->cli);
         $containers = $dockerService->getDockerContainers(false);
+        $stoppedContainers = 0;
         foreach ($containers as $container) {
             $name = $container->names;
             $this->cli->notice('Stopping container: '.$name);
             if (in_array($name, $toStop) || strpos($behatContainer, $name) === 0) {
                 $dockerService->stopDockerContainer($name);
+                $stoppedContainers++;
             }
         }
 
-        $this->cli->success('All containers have been stopped');
+        if ($stoppedContainers > 0) {
+            $this->cli->success('All containers have been stopped');
+        } else {
+            $this->cli->success('No containers were running for this recipe');
+        }
     }
 
     private function configureDockerNetwork(Recipe $recipe): void {
@@ -384,6 +390,8 @@ class Main extends AbstractService {
 
         $this->populateAssets($recipe);
 
+        // If containers are already running then we need to stop them to re-implement recipe.
+        $this->stopContainers();
         $this->startDocker($ymlPath);
 
         $this->configureDockerNetwork($recipe);
