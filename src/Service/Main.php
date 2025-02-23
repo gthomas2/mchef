@@ -88,7 +88,6 @@ class Main extends AbstractService {
         $dbContainer = $this->getDockerDatabaseContainerName();
         $dockerService->startDockerContainer($dbContainer);
 
-
         $this->cli->success('All containers have been started');
     }
 
@@ -332,6 +331,16 @@ class Main extends AbstractService {
         }
         file_put_contents($scriptsAssetsPath.'/install-xdebug.sh', $xdebugContents);
 
+    }
+
+    public function establishInstanceId(): string {
+        $instancePath = $this->getChefPath().'/instance.txt';
+        if (file_exists($instancePath)) {
+            return file_get_contents($instancePath);
+        }
+        // Create new instance uniqId.
+        $instanceId = uniqid(base64_encode(__FILE__));
+        file_put_contents($instancePath, $instanceId);
     }
 
     public function create(string $recipeFilePath) {
