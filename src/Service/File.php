@@ -21,7 +21,7 @@ class File extends AbstractService {
      * @throws ExecFailed
      */
     public function copyFiles($src, $target): string {
-        $cmd = "cp -r $src/{.,}* $target";
+        $cmd = "cp -r $src'.DIRECTORY_SEPARATOR.'{.,}* $target";
         return $this->exec($cmd, "Failed to copy files from $src to $target: {{output}}");
     }
 
@@ -29,23 +29,23 @@ class File extends AbstractService {
         if (!is_dir($path)) {
             throw new Exception('Invalid path '.$path);
         }
-        if (realpath($path) === '/') {
+        if (realpath($path) === ''.DIRECTORY_SEPARATOR.'') {
             throw new Exception('You cannot '.$action.' files from root!');
         }
-        if (realpath($path) === '/etc') {
+        if (realpath($path) === ''.DIRECTORY_SEPARATOR.'etc') {
             throw new Exception('You cannot '.$action.' files from etc folder!');
         }
-        if (realpath($path) === '/bin') {
+        if (realpath($path) === ''.DIRECTORY_SEPARATOR.'bin') {
             throw new Exception('You cannot '.$action.' files from bin folder!');
         }
-        if (realpath($path) === '/usr/bin') {
-            throw new Exception('You cannot '.$action.' files from /usr/bin folder!');
+        if (realpath($path) === ''.DIRECTORY_SEPARATOR.'usr'.DIRECTORY_SEPARATOR.'bin') {
+            throw new Exception('You cannot '.$action.' files from '.DIRECTORY_SEPARATOR.'usr'.DIRECTORY_SEPARATOR.'bin folder!');
         }
     }
 
     public function cmdFindAllFilesExcluding(array $files, array $paths): string {
         $files = array_map(function($file) { return ' -not -file "'.$file.'"';}, $files );
-        $paths = array_map(function($path) { return ' -not -path "'.$path.'" -not -path "'.$path.'/*"';}, $paths );
+        $paths = array_map(function($path) { return ' -not -path "'.$path.'" -not -path "'.$path.''.DIRECTORY_SEPARATOR.'*"';}, $paths );
         $not = implode(' ', $files).implode(' ', $paths);
         $cmd = "find . $not";
         return $cmd;
@@ -74,18 +74,28 @@ class File extends AbstractService {
             @unlink($path) :
             array_map(function($path) {
                 $this->deleteDir($path);
-            }, glob($path.'/*')) == @rmdir($path);
+            }, glob($path.''.DIRECTORY_SEPARATOR.'*')) == @rmdir($path);
     }
 
     public function tempDir() {
-        $tempDir = sys_get_temp_dir().'/'.uniqid(sha1(microtime()), true);
+        $tempDir = sys_get_temp_dir().''.DIRECTORY_SEPARATOR.''.uniqid(sha1(microtime()), true);
         mkdir($tempDir);
         return $tempDir;
     }
 
+    private function getRootDirectoryWindows($currentDir) {
+        $rootDir = '';
+
+        if (preg_match('/^[A-Z]:\\\\/', $currentDir, $matches)) {
+            $rootDir = $matches[0];
+        }
+
+        return $rootDir;
+    }
+
     function findFileInOrAboveDir($filename, ?string $dir = null): ?string {
         $currentDir = $dir ?? getcwd();
-        $rootDir = DIRECTORY_SEPARATOR === '\\' ? getRootDirectoryWindows($currentDir) : DIRECTORY_SEPARATOR;
+        $rootDir = DIRECTORY_SEPARATOR === '\\' ? $this->getRootDirectoryWindows($currentDir) : DIRECTORY_SEPARATOR;
 
         while ($currentDir !== $rootDir) {
             $filePath = $currentDir . DIRECTORY_SEPARATOR . $filename;
@@ -98,15 +108,5 @@ class File extends AbstractService {
         }
 
         return null; // File not found.
-    }
-
-    function getRootDirectoryWindows($currentDir) {
-        $rootDir = '';
-
-        if (preg_match('/^[A-Z]:\\\\/', $currentDir, $matches)) {
-            $rootDir = $matches[0];
-        }
-
-        return $rootDir;
     }
 }

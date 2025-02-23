@@ -5,7 +5,7 @@ error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
 $vendor_path = __DIR__.'/vendor/autoload.php';
 if (stripos(__FILE__, 'bin/')) {
     $vendor_path = __DIR__ . '/../vendor/autoload.php';
-} 
+}
 
 if (!file_exists($vendor_path)) {
     echo 'Please run composer install first!';
@@ -16,6 +16,7 @@ require $vendor_path;
 
 use splitbrain\phpcli\CLI;
 use splitbrain\phpcli\Options;
+use \App\Helpers\OS;
 
 class MChefCLI extends CLI {
     static $version = '1.0.0';
@@ -34,10 +35,10 @@ class MChefCLI extends CLI {
     public $dockerService;
 
     private function registerCommands(Options $options) {
-        if (strpos(__FILE__, 'bin/mchef.php') !== false) {
-            $files = scandir(__DIR__.'/../src/Command');
+        if (strpos(__FILE__, OS::path('bin/mchef.php')) !== false) {
+            $files = scandir(OS::path(__DIR__.'/../src/Command'));
         } else {
-            $files = scandir(__DIR__.'/src/Command');
+            $files = scandir(OS::path(__DIR__.'/src/Command'));
         }
 
         $files = array_filter($files, function($file) {
@@ -55,7 +56,7 @@ class MChefCLI extends CLI {
         // Run dependency checks. If one of them fails, program will die()
         $this->depService = \App\Service\Dependencies::instance($this);
         $this->depService->check();
-        
+
         $options->setHelp('Facilitates the creation of moodle docker instances with custom configurations.');
         $this->registerCommands($options);
         $options->registerArgument('recipe', 'File location of recipe', false);
