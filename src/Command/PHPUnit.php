@@ -44,7 +44,9 @@ class PHPUnit extends AbstractCommand {
 
         $runMsg = 'Executing phpunit tests';
 
-        if (empty($testsuite)) {
+        if (!empty($groups)) {
+            $runCode .= ' --group='.$groups;
+        } else if (empty($testsuite)) {
             $plugins = $pluginsService->getPluginsCsvFromOptions($options);
             $pluginComps = array_map(function($i) {
                 return $i->component;
@@ -62,9 +64,6 @@ class PHPUnit extends AbstractCommand {
             } else if (!empty($groups)) {
                 $runMsg .= " for groups $groups";
             }
-            if (!empty($groups)) {
-                $runCode .= ' --group='.$groups;
-            }
             if (!empty($pluginTestPaths)) {
                 $runCode .= ' '.implode(' ', $pluginTestPaths);
             }
@@ -73,6 +72,7 @@ class PHPUnit extends AbstractCommand {
             $runCode .= ' --testsuite='.$testsuite;
             $runMsg .= ' for testsuite '.$testsuite;
         }
+        $this->cli->notice($runCode);
         $this->cli->notice($runMsg);
         $cmd = 'docker exec -it '.$moodleContainer.' '.$runCode;
 
