@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use App\Exceptions\ExecFailed;
+use App\Helpers\OS;
 use App\Traits\ExecTrait;
 use splitbrain\phpcli\Exception;
 
@@ -21,7 +22,7 @@ class File extends AbstractService {
      * @throws ExecFailed
      */
     public function copyFiles($src, $target): string {
-        $cmd = "cp -r $src'.DIRECTORY_SEPARATOR.'{.,}* $target";
+        $cmd = "cp -r $src".DIRECTORY_SEPARATOR."{.,}* $target";
         return $this->exec($cmd, "Failed to copy files from $src to $target: {{output}}");
     }
 
@@ -29,23 +30,23 @@ class File extends AbstractService {
         if (!is_dir($path)) {
             throw new Exception('Invalid path '.$path);
         }
-        if (realpath($path) === ''.DIRECTORY_SEPARATOR.'') {
+        if (realpath($path) === _SEPARATORDIRECTORY) {
             throw new Exception('You cannot '.$action.' files from root!');
         }
-        if (realpath($path) === ''.DIRECTORY_SEPARATOR.'etc') {
+        if (realpath($path) === OS::path('/etc')) {
             throw new Exception('You cannot '.$action.' files from etc folder!');
         }
-        if (realpath($path) === ''.DIRECTORY_SEPARATOR.'bin') {
+        if (realpath($path) === OS::path('/bin')) {
             throw new Exception('You cannot '.$action.' files from bin folder!');
         }
-        if (realpath($path) === ''.DIRECTORY_SEPARATOR.'usr'.DIRECTORY_SEPARATOR.'bin') {
-            throw new Exception('You cannot '.$action.' files from '.DIRECTORY_SEPARATOR.'usr'.DIRECTORY_SEPARATOR.'bin folder!');
+        if (realpath($path) === OS::path('/usr/bin')) {
+            throw new Exception('You cannot '.$action.' files from '.OS::path('/usr/bin').' folder!');
         }
     }
 
     public function cmdFindAllFilesExcluding(array $files, array $paths): string {
         $files = array_map(function($file) { return ' -not -file "'.$file.'"';}, $files );
-        $paths = array_map(function($path) { return ' -not -path "'.$path.'" -not -path "'.$path.''.DIRECTORY_SEPARATOR.'*"';}, $paths );
+        $paths = array_map(function($path) { return ' -not -path "'.$path.'" -not -path "'.$path.DIRECTORY_SEPARATOR.'*"';}, $paths );
         $not = implode(' ', $files).implode(' ', $paths);
         $cmd = "find . $not";
         return $cmd;
@@ -74,11 +75,11 @@ class File extends AbstractService {
             @unlink($path) :
             array_map(function($path) {
                 $this->deleteDir($path);
-            }, glob($path.''.DIRECTORY_SEPARATOR.'*')) == @rmdir($path);
+            }, glob($path.'*')) == @rmdir($path);
     }
 
     public function tempDir() {
-        $tempDir = sys_get_temp_dir().''.DIRECTORY_SEPARATOR.''.uniqid(sha1(microtime()), true);
+        $tempDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.uniqid(sha1(microtime()), true);
         mkdir($tempDir);
         return $tempDir;
     }
@@ -95,16 +96,16 @@ class File extends AbstractService {
 
     function findFileInOrAboveDir($filename, ?string $dir = null): ?string {
         $currentDir = $dir ?? getcwd();
-        $rootDir = DIRECTORY_SEPARATOR === '\\' ? $this->getRootDirectoryWindows($currentDir) : DIRECTORY_SEPARATOR;
+        $rootDir = OS::isWindows() ? $this->getRootDirectoryWindows($currentDir) : DIRECTORY_SEPARATOR;
 
         while ($currentDir !== $rootDir) {
-            $filePath = $currentDir . DIRECTORY_SEPARATOR . $filename;
+            $filePath = OS::path("$currentDir/$filename");
 
             if (file_exists($filePath)) {
                 return $filePath;
             }
 
-            $currentDir = realpath($currentDir . DIRECTORY_SEPARATOR . '..');
+            $currentDir = realpath(OS::path($currentDir .'/..'));
         }
 
         return null; // File not found.

@@ -28,7 +28,7 @@ class InstallToBin extends AbstractService {
             $dirs = explode(':', $path);
 
             foreach ($dirs as $dir) {
-                $executablePath = $dir . 'DIRECTORY_SEPARATOR .  "php" . DIRECTORY_SEPARATOR';
+                $executablePath = $dir . '/php';
                 if (is_executable($executablePath)) {
                     $phpExecutablePath = $executablePath;
                     break;
