@@ -40,7 +40,7 @@ class CopySrc extends AbstractCommand {
 
         // Copy all moodle files to temp folder on guest.
         $this->cli->notice('Preparing moodle src on guest');
-        $cmd = 'docker exec '.$moodleContainer.' cp -R '.DIRECTORY_SEPARATOR.'var'.DIRECTORY_SEPARATOR.'www'.DIRECTORY_SEPARATOR.'html'.DIRECTORY_SEPARATOR.'moodle '.$tmpDir;
+        $cmd = 'docker exec '.$moodleContainer.' cp -R var/www/html/moodle '.$tmpDir;
         $this->execPassthru($cmd);
 
         // Remove plugin folders from tmpDir on guest.
@@ -49,23 +49,23 @@ class CopySrc extends AbstractCommand {
         $pluginsInfo = Plugins::instance($this->cli)->getPluginsInfoFromRecipe($this->recipe);
         $paths = array_map(function($volume) { return $volume->path; }, $pluginsInfo->volumes);
         foreach ($paths as $path) {
-            $cmd = 'docker exec '.$moodleContainer.' rm -rf '.$tmpDir.''.DIRECTORY_SEPARATOR.'moodle'.DIRECTORY_SEPARATOR.''.$path;
+            $cmd = 'docker exec '.$moodleContainer.' rm -rf '.$tmpDir.'/moodle/'.$path;
             $this->exec($cmd);
         }
 
         // Also purge the folder of git folders if present.
-        $cmd = 'docker exec -w '.$tmpDir.''.DIRECTORY_SEPARATOR.'moodle '.$moodleContainer.' find . -path ".'.DIRECTORY_SEPARATOR.'.git" -exec rm -rf {} +';
+        $cmd = 'docker exec -w '.$tmpDir.'/moodle '.$moodleContainer.' find . -path "./.git" -exec rm -rf {} +';
         $this->exec($cmd);
 
         $this->cli->notice('Copying moodle source to project directory');
-        $exec = 'docker cp '.$moodleContainer.':'.$tmpDir.''.DIRECTORY_SEPARATOR.'moodle'.DIRECTORY_SEPARATOR.'. '.getcwd();
+        $exec = 'docker cp '.$moodleContainer.':'.$tmpDir.'/moodle/.'.getcwd();
         $this->execPassthru($exec);
 
         // Remove temp directory on guest moodle container.
         $cmd = 'rm -rf '.$tmpDir;
         $this->exec('docker exec '.$moodleContainer.' '.$cmd);
 
-        if (file_exists(getcwd().''.DIRECTORY_SEPARATOR.'lib'.DIRECTORY_SEPARATOR.'weblib.php')) {
+        if (file_exists(getcwd().'/lib/weblib.php')) {
             $this->cli->success('Finished copying moodle source to project directory');
         }
     }
@@ -73,7 +73,7 @@ class CopySrc extends AbstractCommand {
     public function execute(Options $options): void {
         Project::instance($this->cli)->purgeProjectFolderOfNonPluginCode();
 
-        $git = getcwd().''.DIRECTORY_SEPARATOR.'.git';
+        $git = getcwd().'/.git';
         if (file_exists($git)) {
             // TODO - implement.
             $this->cli->promptYesNo("Your project folder seems to be a git project.\n".

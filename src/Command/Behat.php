@@ -3,6 +3,7 @@
 namespace App\Command;
 
 use App\Exceptions\ExecFailed;
+use App\Helpers\OS;
 use App\Model\Plugin;
 use App\Service\Docker;
 use App\Service\Main;
@@ -30,7 +31,7 @@ class Behat extends AbstractCommand {
 
     private function getBehatRunCodeFromInitOutput(string $initOutput): string {
         // First, test for actual line.
-        if (stripos($initOutput, 'vendor'.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'behat') === 0) {
+        if (stripos($initOutput, OS::path('vendor/bin/behat')) === 0) {
             return explode("\n", $initOutput)[0];
         }
         // Get match on success line.
@@ -46,7 +47,7 @@ class Behat extends AbstractCommand {
         $lines = array_map('trim', explode("\n", $initOutput));
         $pos = array_search($fullMatch, $lines);
 
-        if (stripos($lines[$pos + 1], 'vendor'.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'behat') !== 0) {
+        if (stripos($lines[$pos + 1], OS::path('vendor/bin/behat')) !== 0) {
             throw new Exception('Behat initialization seems to have failed: '.$initOutput);
         }
 
@@ -105,7 +106,7 @@ class Behat extends AbstractCommand {
 
         $this->cli->notice('Initializing behat');
         $moodleContainer = $mainService->getDockerMoodleContainerName();
-        $cmd = 'docker exec -it '.$moodleContainer.' php '.DIRECTORY_SEPARATOR.'var'.DIRECTORY_SEPARATOR.'www'.DIRECTORY_SEPARATOR.'html'.DIRECTORY_SEPARATOR.'moodle'.DIRECTORY_SEPARATOR.'admin'.DIRECTORY_SEPARATOR.'tool'.DIRECTORY_SEPARATOR.'behat'.DIRECTORY_SEPARATOR.'cli'.DIRECTORY_SEPARATOR.'init.php --axe';
+        $cmd = 'docker exec -it '.$moodleContainer.' php/var/www/html/moodle/admin/tool/behat/cli/init.php --axe';
         $this->execStream($cmd, 'Failed to initialize behat');
         // !NOTE AWFUL, AWFUL BUG FIX!
         // Have to do it twice because execStream only returns last line which can end up being performance information as opposed
@@ -119,7 +120,7 @@ class Behat extends AbstractCommand {
         $this->verbose = $verbose;
 
         $behatRunCode = $this->getBehatRunCodeFromInitOutput($output);
-        $behatRunCode = str_replace('vendor'.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'behat', ''.DIRECTORY_SEPARATOR.'var'.DIRECTORY_SEPARATOR.'www'.DIRECTORY_SEPARATOR.'html'.DIRECTORY_SEPARATOR.'moodle'.DIRECTORY_SEPARATOR.'vendor'.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'behat', $behatRunCode);
+        $behatRunCode = str_replace('vendor/bin/behat', 'var/www/html/moodle/vendor/bin/behat', $behatRunCode);
 
         $featureFile = null;
         if ($args = $options->getArgs()) {
