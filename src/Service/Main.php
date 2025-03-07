@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Helpers\OS;
 use App\Model\DockerData;
 use App\Model\PluginsInfo;
 use App\Model\Recipe;
@@ -220,20 +221,13 @@ class Main extends AbstractService {
       return $dockerService->checkPortAvailable($recipe->port);
     }
 
-    public function isWindows():bool{
-        return strtoupper(substr(PHP_OS,0,3)) === 'WIN';
-    }
-
-    public function hostPath() : string
-    {
-        if ($this->isWindows()){
+    public function hostPath() : string {
+        if (!OS::isWindows()) {
+            return '/etc/hosts';
+        } else {
             return 'C:\\Windows\\System32\\drivers\\etc\\hosts';
         }
-        else {
-            return '/etc./hosts';
-        }
     }
-
 
     private function updateHostHosts(Recipe $recipe): void {
         $destHostsFile = $this->hostPath();
@@ -281,10 +275,13 @@ class Main extends AbstractService {
         $tmpHostsFile = tempnam(sys_get_temp_dir(), "etc_hosts");
         file_put_contents($tmpHostsFile, $hostsContent);
 
-
-
-        $this->cli->notice("Updating $destHostsFile - may need root password.");
-        $cmd = "copy /Y \"$tmpHostsFile\" \"$destHostsFile\"";
+        if (!OS::isWindows()) {
+            $this->cli->notice("Updating $destHostsFile - may need root password.");
+            $cmd = "sudo cp -f $tmpHostsFile /etc/hosts";
+        } else {
+            $this->cli->notice("Updating $destHostsFile - may need to be running as administrator.");
+            $cmd = "copy /Y \"$tmpHostsFile\" \"$destHostsFile\"";
+        }
         exec($cmd, $output, $returnVar);
 
         if ($returnVar != 0) {

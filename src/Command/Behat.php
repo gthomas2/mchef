@@ -120,7 +120,7 @@ class Behat extends AbstractCommand {
         $this->verbose = $verbose;
 
         $behatRunCode = $this->getBehatRunCodeFromInitOutput($output);
-        $behatRunCode = str_replace('vendor/bin/behat', 'var/www/html/moodle/vendor/bin/behat', $behatRunCode);
+        $behatRunCode = str_replace('vendor/bin/behat', '/var/www/html/moodle/vendor/bin/behat', $behatRunCode);
 
         $featureFile = null;
         if ($args = $options->getArgs()) {

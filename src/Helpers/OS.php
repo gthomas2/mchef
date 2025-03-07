@@ -9,6 +9,13 @@ class OS {
         return stripos(PHP_OS, 'WIN') === 0;
     }
 
+    public static function escShellArg(string $arg): string {
+        if (!self::isWindows()) {
+            return escapeshellarg($arg);
+        }
+        return "'".str_replace("'", "''", $arg)."'";
+    }
+
     public static function path(string $path): string {
         if (strpos($path, '\\') !== false) {
             throw new CodingException('Paths must never contain windows directory separators in code');

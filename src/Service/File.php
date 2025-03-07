@@ -22,34 +22,92 @@ class File extends AbstractService {
      * @throws ExecFailed
      */
     public function copyFiles($src, $target): string {
-        $cmd = "cp -r $src".DIRECTORY_SEPARATOR."{.,}* $target";
+        $this->folderRestrictionCheck($src, 'copy');
+        $this->folderRestrictionCheck($target, 'copy');
+
+        if (!OS::isWindows()) {
+            $cmd = sprintf(
+                "cp -r %s/{.,}* %s",
+                OS::escShellArg($src),
+                OS::escShellArg($target)
+            );
+        } else {
+            $cmd = sprintf(
+                'powershell -Command "Copy-Item -Path %s -Destination %s -Recurse -Force -ErrorAction Stop"',
+                OS::escShellArg("$src\\*"),
+                OS::escShellArg($target)
+            );
+        }
+
         return $this->exec($cmd, "Failed to copy files from $src to $target: {{output}}");
     }
 
     private function folderRestrictionCheck(string $path, string $action) {
         if (!is_dir($path)) {
-            throw new Exception('Invalid path '.$path);
+            throw new Exception('Invalid path: ' . $path);
         }
-        if (realpath($path) === _SEPARATORDIRECTORY) {
-            throw new Exception('You cannot '.$action.' files from root!');
+
+        $realPath = realpath($path);
+        if ($realPath === false) {
+            throw new Exception('Could not resolve real path for: ' . $path);
         }
-        if (realpath($path) === OS::path('/etc')) {
-            throw new Exception('You cannot '.$action.' files from etc folder!');
+
+        if (!OS::isWindows()) {
+            if ($realPath === DIRECTORY_SEPARATOR) {
+                throw new Exception('You cannot ' . $action . ' files from root!');
+            }
+        } else {
+            // Windows sensitive folders
+            $restrictedWindowsPaths = [
+                'C:\\Windows',         // Windows system folder
+                'C:\\Windows\\System32',
+                'C:\\Windows\\SysWOW64',
+                'C:\\Program Files',   // Default installation folder
+                'C:\\Program Files (x86)',
+                'C:\\Users\\Administrator',  // Admin home
+                'C:\\Users\\Public',  // Public shared files
+                'C:\\',               // Root of C drive
+            ];
+
+            foreach ($restrictedWindowsPaths as $restrictedPath) {
+                if (stripos($realPath, $restrictedPath) === 0) {
+                    throw new Exception('You cannot ' . $action . ' files from sensitive Windows system directories!');
+                }
+            }
         }
-        if (realpath($path) === OS::path('/bin')) {
-            throw new Exception('You cannot '.$action.' files from bin folder!');
-        }
-        if (realpath($path) === OS::path('/usr/bin')) {
-            throw new Exception('You cannot '.$action.' files from '.OS::path('/usr/bin').' folder!');
+
+        // Unix-sensitive folders
+        $restrictedUnixPaths = [
+            OS::path('/etc'),
+            OS::path('/bin'),
+            OS::path('/usr/bin'),
+            OS::path('/var/lib'),
+            OS::path('/boot'),
+            OS::path('/sbin'),
+        ];
+
+        if (in_array($realPath, $restrictedUnixPaths, true)) {
+            throw new Exception('You cannot ' . $action . ' files from sensitive Unix system directories!');
         }
     }
 
+
     public function cmdFindAllFilesExcluding(array $files, array $paths): string {
-        $files = array_map(function($file) { return ' -not -file "'.$file.'"';}, $files );
-        $paths = array_map(function($path) { return ' -not -path "'.$path.'" -not -path "'.$path.DIRECTORY_SEPARATOR.'*"';}, $paths );
-        $not = implode(' ', $files).implode(' ', $paths);
-        $cmd = "find . $not";
-        return $cmd;
+        if (!OS::isWindows()) {
+            $files = array_map(fn($file) => ' -not -file ' . OS::escShellArg($file), $files);
+            $paths = array_map(fn($path) => ' -not -path ' . OS::escShellArg($path) . ' -not -path ' . OS::escShellArg($path . DIRECTORY_SEPARATOR . '*'), $paths);
+            return "find . " . implode(' ', $files) . implode(' ', $paths);
+        }
+
+        // PowerShell Alternative for Windows
+        $notFiles = implode(' -and ', array_map(fn($file) => "-not (Get-Item " . OS::escShellArg($file) . ")", $files));
+        $notPaths = implode(' -and ', array_map(fn($path) => "-not (Get-Item " . OS::escShellArg($path) . ") -and -not (Get-Item " . OS::escShellArg($path . '\\*') . ")", $paths));
+
+        return sprintf(
+            'powershell -Command "Get-ChildItem -Path . -Recurse | Where-Object { %s %s }"',
+            $notFiles,
+            $notPaths
+        );
     }
 
     /**
@@ -62,21 +120,43 @@ class File extends AbstractService {
      */
     public function deleteAllFilesExcluding(string $path, array $files, array $paths): string {
         $this->folderRestrictionCheck($path, 'delete');
-        $cmd = $this->cmdFindAllFilesExcluding($files, $paths);
-        $cmd = "$cmd -delete";
+
+        if (!OS::isWindows()) {
+            $cmd = $this->cmdFindAllFilesExcluding($files, $paths);
+            $cmd = "$cmd -delete";
+        } else {
+            // PowerShell equivalent for Windows
+            $notFiles = implode(' -and ', array_map(fn($file) => "-not (Get-Item '$file')", $files));
+            $notPaths = implode(' -and ', array_map(fn($path) => "-not (Get-Item '$path') -and -not (Get-Item '$path\\*')", $paths));
+
+            $cmd = sprintf(
+                'powershell -Command "Get-ChildItem -Path %s -Recurse | Where-Object { %s %s } | Remove-Item -Force -Recurse"',
+                OS::escShellArg($path),
+                $notFiles,
+                $notPaths
+            );
+        }
+
         return $this->exec($cmd);
     }
+
 
     public function deleteDir($path) {
         if (empty($path)) {
             return false;
         }
-        return is_file($path) ?
-            @unlink($path) :
-            array_map(function($path) {
-                $this->deleteDir($path);
-            }, glob($path.'*')) == @rmdir($path);
+
+        if (is_file($path)) {
+            return @unlink($path);
+        }
+
+        foreach (glob(OS::path("$path/*")) as $file) {
+            $this->deleteDir($file);
+        }
+
+        return @rmdir($path);
     }
+
 
     public function tempDir() {
         $tempDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.uniqid(sha1(microtime()), true);
@@ -85,29 +165,32 @@ class File extends AbstractService {
     }
 
     private function getRootDirectoryWindows($currentDir) {
-        $rootDir = '';
-
         if (preg_match('/^[A-Z]:\\\\/', $currentDir, $matches)) {
-            $rootDir = $matches[0];
+            return $matches[0];
         }
-
-        return $rootDir;
+        return 'C:\\'; // Fallback if something goes wrong
     }
 
     function findFileInOrAboveDir($filename, ?string $dir = null): ?string {
         $currentDir = $dir ?? getcwd();
-        $rootDir = OS::isWindows() ? $this->getRootDirectoryWindows($currentDir) : DIRECTORY_SEPARATOR;
+        $rootDir = OS::isWindows() ? $this->getRootDirectoryWindows($currentDir) : '/';
 
-        while ($currentDir !== $rootDir) {
+        while ($currentDir !== $rootDir && $currentDir !== false) {
             $filePath = OS::path("$currentDir/$filename");
 
             if (file_exists($filePath)) {
                 return $filePath;
             }
 
-            $currentDir = realpath(OS::path($currentDir .'/..'));
+            $parentDir = realpath(OS::path($currentDir .'/..'));
+            if ($parentDir === $currentDir) {
+                break; // Prevent infinite loop at root
+            }
+
+            $currentDir = $parentDir;
         }
 
-        return null; // File not found.
+        return null;
     }
+
 }

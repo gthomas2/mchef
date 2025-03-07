@@ -40,7 +40,7 @@ class CopySrc extends AbstractCommand {
 
         // Copy all moodle files to temp folder on guest.
         $this->cli->notice('Preparing moodle src on guest');
-        $cmd = 'docker exec '.$moodleContainer.' cp -R var/www/html/moodle '.$tmpDir;
+        $cmd = 'docker exec '.$moodleContainer.' cp -R /var/www/html/moodle '.$tmpDir;
         $this->execPassthru($cmd);
 
         // Remove plugin folders from tmpDir on guest.
@@ -58,7 +58,7 @@ class CopySrc extends AbstractCommand {
         $this->exec($cmd);
 
         $this->cli->notice('Copying moodle source to project directory');
-        $exec = 'docker cp '.$moodleContainer.':'.$tmpDir.'/moodle/.'.getcwd();
+        $exec = 'docker cp '.$moodleContainer.':'.$tmpDir.'/moodle/. '.getcwd();
         $this->execPassthru($exec);
 
         // Remove temp directory on guest moodle container.

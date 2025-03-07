@@ -25,8 +25,8 @@ class Project extends AbstractService {
         // Add other paths to not delete.
         $paths[] = '.mchef'; // Definitely do not want to delete this! (TODO- this is probably unnecessary due to line below).
         $paths[] = './.*'; // Any other hidden folders at the root of this mchef dir.
-        $paths[] = '.''/_behat_dump';
-        $paths[] = '.''/*recipe.json';
+        $paths[] = './_behat_dump';
+        $paths[] = './*recipe.json';
         $this->cli->promptYesNo('All non project related files will be removed from this dir. Continue?', null,
             function() { die('Aborted!'); });
         File::instance()->deleteAllFilesExcluding($projectDir, [], $paths);
