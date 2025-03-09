@@ -3,7 +3,7 @@
 error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
 
 $vendor_path = __DIR__.'/vendor/autoload.php';
-if (stripos(__FILE__, 'bin/')) {
+if (stripos(__FILE__, 'bin'.DIRECTORY_SEPARATOR)) {
     $vendor_path = __DIR__ . '/../vendor/autoload.php';
 }
 
