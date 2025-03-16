@@ -201,7 +201,7 @@ class Plugins extends AbstractService {
         if (empty($path)) {
             throw new Exception('Unsupported plugin: '.$pluginName);
         }
-        return OS::path($path);
+        return $path;
     }
 
     /**
@@ -319,7 +319,8 @@ class Plugins extends AbstractService {
                         if (file_exists($tmpDir.'/version.php')) {
                             $pluginName = $this->getPluginComponentFromVersionFile($tmpDir.'/version.php');
                             $pluginPath = $this->getMoodlePluginPath($pluginName);
-                            $targetPath = str_replace('//', '/', getcwd().'/'.$pluginPath);
+                            $ds = DIRECTORY_SEPARATOR;
+                            $targetPath = str_replace("{$ds}{$ds}", $ds, OS::path(getcwd().$ds.$pluginPath));
                             if (!file_exists($targetPath.'/version.php')) {
                                 $this->cli->info('Moving plugin from temp folder to ' . $targetPath);
                                 if (!file_exists($targetPath)) {
@@ -331,7 +332,13 @@ class Plugins extends AbstractService {
                                 // Plugin already present locally.
                                 File::instance()->deleteDir($tmpDir);
                             }
-                            $volume = new Volume(...['path' => $pluginPath, 'hostPath' => $targetPath]);
+                            if (OS::isWindows()) {
+                                //replace single \ with \\ escape backslash
+                                $targetPath = str_replace($ds, "{$ds}{$ds}", OS::path($targetPath));
+                            }
+                            $volume = new Volume(...['path' => $pluginPath, 'hostPath' => OS::path($targetPath)]);
+
+
                             $volumes[] = $volume;
                             $plugins[$pluginName] = new Plugin(
                                 $pluginName,
