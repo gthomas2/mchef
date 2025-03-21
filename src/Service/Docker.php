@@ -185,4 +185,17 @@ class Docker extends AbstractService {
         }
       return true;
     }
+
+    public function windowsToDockerPath($windowsPath) {
+        // Replace backslashes with forward slashes
+        $dockerPath = str_replace("\\", "/", $windowsPath);
+        
+        // Convert the drive letter (e.g., 'C:') to the corresponding Unix-style path
+        if (preg_match('/^[A-Za-z]:\//', $dockerPath)) {
+            // Change the drive letter (e.g., C:\) to /c/
+            $dockerPath = "/" . strtolower($dockerPath[0]) . substr($dockerPath, 2);
+        }
+    
+        return $dockerPath;
+    }
 }

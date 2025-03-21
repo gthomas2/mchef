@@ -111,7 +111,7 @@ class File extends AbstractService {
     }
 
     /**
-     * Delete all files
+     * Delete all files excluding specific files
      * @param string $path - target path of which to delete files from
      * @param array $files
      * @param array $paths
