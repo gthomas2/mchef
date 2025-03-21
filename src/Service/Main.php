@@ -174,8 +174,17 @@ class Main extends AbstractService {
             }
             $this->cli->notice('DB '.$dbContainer.' ready!');
 
-            $dbSchemaInstalledCmd = 'docker exec ' . escapeshellarg($dbContainer) . ' sh -c ' . escapeshellarg('psql -U ' . $recipe->dbUser . ' -d ' . $recipe->dbName . ' -c "SELECT * FROM mdl_course" > /dev/null 2>&1');
+            $dockerDbExecBase = 'docker exec ' . escapeshellarg($dbContainer);
 
+            if (OS::isWindows()) {
+                // For Windows, `cmd` is used with `/c` to execute the command
+                $dbSchemaInstalledCmd = $dockerDbExecBase . ' cmd /c "psql -U ' . $recipe->dbUser . ' -d ' . $recipe->dbName . ' -c \\"SELECT * FROM mdl_course\\" > nul 2>&1 || exit 1"';
+            } else {
+                // For Linux, use `sh` as the shell
+                $dbSchemaInstalledCmd = $dockerDbExecBase . ' sh -c "psql -U ' . $recipe->dbUser . ' -d ' . $recipe->dbName . ' -c \\"SELECT * FROM mdl_course\\" > /dev/null 2>&1 || exit 1"';
+            }
+            
+            // Execute the command
             exec($dbSchemaInstalledCmd, $output, $returnVar);
             $dbSchemaInstalled = $returnVar === 0;
             $doDbInstall = !$dbSchemaInstalled;
