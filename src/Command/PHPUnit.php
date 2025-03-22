@@ -68,7 +68,7 @@ class PHPUnit extends AbstractCommand {
                 $runCode .= ' '.implode(' ', $pluginTestPaths);
             }
         } else {
-            $runCode .= ' /var/www/html/moodle/ ';
+            $runCode .= ' /var/www/html/moodle/';
             $runCode .= ' --testsuite='.$testsuite;
             $runMsg .= ' for testsuite '.$testsuite;
         }

@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Helpers\OS;
 use App\Model\DockerData;
 use App\Model\PluginsInfo;
 use App\Model\Recipe;
@@ -67,9 +68,10 @@ class Main extends AbstractService {
     }
 
     private function startDocker($ymlPath) {
+        $ymlPath=OS::path($ymlPath);
         $this->cli->notice('Starting docker containers');
         // @Todo - force-recreate and --build need to be flags that get passed in, not hard coded.
-        $cmd = "docker compose -f $ymlPath up -d --force-recreate --build";
+        $cmd = "docker compose -f \"$ymlPath\" up -d --force-recreate --build";
         $this->execPassthru($cmd, "Error starting docker containers - try pruning with 'docker builder prune' OR 'docker system prune' (note 'docker system prune' will destroy all non running container images)");
 
         // @Todo - Add code here to check docker ps for expected running containers.
@@ -159,8 +161,9 @@ class Main extends AbstractService {
             $this->cli->notice('Try installing MoodleDB');
 
             $dbnotready = true;
-            $dbCheckCmd = 'docker exec ' . $dbContainer . ' psql -U ' . $recipe->dbUser . ' -d ' . $recipe->dbName . ' -c "SELECT 1" > /dev/null 2>&1';
+            $dbCheckCmd = 'docker exec ' . escapeshellarg($dbContainer) . ' sh -c ' . escapeshellarg('psql -U ' . $recipe->dbUser . ' -d ' . $recipe->dbName . ' -c "SELECT 1" > /dev/null 2>&1');
 
+            
             while ($dbnotready) {
                 exec($dbCheckCmd, $output, $returnVar);
                 if ($returnVar === 0) {
@@ -171,7 +174,17 @@ class Main extends AbstractService {
             }
             $this->cli->notice('DB '.$dbContainer.' ready!');
 
-            $dbSchemaInstalledCmd = 'docker exec ' . $dbContainer . ' psql -U ' . $recipe->dbUser . ' -d ' . $recipe->dbName . ' -c "SELECT * FROM mdl_course" > /dev/null 2>&1';
+            $dockerDbExecBase = 'docker exec ' . escapeshellarg($dbContainer);
+
+            if (OS::isWindows()) {
+                // For Windows, `cmd` is used with `/c` to execute the command
+                $dbSchemaInstalledCmd = $dockerDbExecBase . ' cmd /c "psql -U ' . $recipe->dbUser . ' -d ' . $recipe->dbName . ' -c \\"SELECT * FROM mdl_course\\" > nul 2>&1 || exit 1"';
+            } else {
+                // For Linux, use `sh` as the shell
+                $dbSchemaInstalledCmd = $dockerDbExecBase . ' sh -c "psql -U ' . $recipe->dbUser . ' -d ' . $recipe->dbName . ' -c \\"SELECT * FROM mdl_course\\" > /dev/null 2>&1 || exit 1"';
+            }
+            
+            // Execute the command
             exec($dbSchemaInstalledCmd, $output, $returnVar);
             $dbSchemaInstalled = $returnVar === 0;
             $doDbInstall = !$dbSchemaInstalled;
@@ -220,10 +233,20 @@ class Main extends AbstractService {
       return $dockerService->checkPortAvailable($recipe->port);
     }
 
+    public function hostPath() : string {
+        if (!OS::isWindows()) {
+            return '/etc/hosts';
+        } else {
+            return 'C:\\Windows\\System32\\drivers\\etc\\hosts';
+        }
+    }
+
     private function updateHostHosts(Recipe $recipe): void {
+        $destHostsFile = $this->hostPath();
+
         if ($recipe->updateHostHosts) {
             try {
-                $hosts = file('/etc/hosts');
+                $hosts = file($this->hostPath());
             } catch (\Exception $e) {
                 $this->cli->error('Failed to update host hosts file');
             }
@@ -246,7 +269,7 @@ class Main extends AbstractService {
         });
 
         if (empty($toAdd)) {
-            $this->cli->info('No hosts to add to host /etc/hosts file');
+            $this->cli->info("No hosts to add to host $destHostsFile file");
             return;
         }
 
@@ -264,22 +287,27 @@ class Main extends AbstractService {
         $tmpHostsFile = tempnam(sys_get_temp_dir(), "etc_hosts");
         file_put_contents($tmpHostsFile, $hostsContent);
 
-        $this->cli->notice('Updating /etc/hosts - may need root password.');
-        $cmd = "sudo cp -f $tmpHostsFile /etc/hosts";
+        if (!OS::isWindows()) {
+            $this->cli->notice("Updating $destHostsFile - may need root password.");
+            $cmd = "sudo cp -f $tmpHostsFile /etc/hosts";
+        } else {
+            $this->cli->notice("Updating $destHostsFile - may need to be running as administrator.");
+            $cmd = "copy /Y \"$tmpHostsFile\" \"$destHostsFile\"";
+        }
         exec($cmd, $output, $returnVar);
 
         if ($returnVar != 0) {
-            throw new Exception("Error updating /etc/hosts file");
+            throw new Exception("Error updating $destHostsFile file");
         }
 
-        $hostsContent = file_get_contents('/etc/hosts');
+        $hostsContent = file_get_contents($destHostsFile);
         foreach ($toAdd as $toCheck) {
             if (stripos($hostsContent, $toCheck) === false) {
-                throw new Exception('Failed to update /etc/hosts');
+                throw new Exception("Failed to update $destHostsFile");
             }
         }
 
-        $this->cli->success('Successfully updated /etc/hosts');
+        $this->cli->success("Successfully updated $destHostsFile");
     }
 
     private function parseRecipe(string $recipeFilePath): Recipe {
@@ -341,9 +369,11 @@ class Main extends AbstractService {
         // Create new instance uniqId.
         $instanceId = uniqid(base64_encode(__FILE__));
         file_put_contents($instancePath, $instanceId);
+        return $instanceId;
     }
 
     public function create(string $recipeFilePath) {
+        $recipeFilePath=OS::path($recipeFilePath);
         $this->cli->notice('Cooking up recipe '.$recipeFilePath);
         if (stripos(getcwd(), 'moodle-chef') !== false) {
             throw new Exception('You should not run mchef from within the moodle-chef folder.'.
@@ -353,6 +383,19 @@ class Main extends AbstractService {
             );
         }
         $recipe = $this->parseRecipe($recipeFilePath);
+
+        $directory = OS::path(getcwd() . '/.mchef'); // Get the current working directory and append '.mchef'
+        if (!is_dir($directory)) {
+            mkdir($directory, 0777, true); // Create the directory with appropriate permissions
+        }
+        // Define the path for the recipe.json file
+        $recipeJsonFilePath = OS::path($directory . '/recipe.json');
+
+        // Check if the recipe.json file exists
+        if (!file_exists($recipeJsonFilePath)) {
+           // If the file doesn't exist, copy the contents of $recipeFilePath to the new recipe.json file
+           copy($recipeFilePath, $recipeJsonFilePath);
+        }
         $this->stopContainers($recipe);
         $this->checkPortBinding($recipe) || die();
 
@@ -369,6 +412,7 @@ class Main extends AbstractService {
         if ($volumes) {
             $this->cli->info('Volumes will be created for plugins: '.implode("\n", array_map(function($vol) {return $vol->path;}, $volumes)));
         }
+
         $dockerData = new DockerData($volumes, null, ...(array) $recipe);
         $dockerData->volumes = $volumes;
 

@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Helpers\OS;
 use App\Model\Plugin;
 use App\Model\PluginsInfo;
 use App\Model\Recipe;
@@ -293,6 +294,8 @@ class Plugins extends AbstractService {
     public function getPluginsInfoFromRecipe(Recipe $recipe): ?PluginsInfo {
         $mcPluginsInfo = $this->loadMchefPluginsInfo();
         if ($mcPluginsInfo && $this->checkPluginsInfoInSync($recipe, $mcPluginsInfo)) {
+            // @TODO - we need a cli argument to prevent caching - e.g. --no-cache
+            // if no-cache is passed we need it to skip this code
             $this->cli->info('Using cached plugins info');
             return $mcPluginsInfo;
         }
@@ -315,13 +318,17 @@ class Plugins extends AbstractService {
                     $versionFiles = $this->findMoodleVersionFiles($tmpDir);
                     if (count($versionFiles) === 1) {
                         // Repository is a single plugin.
-                        if (file_exists($tmpDir.'/version.php')) {
+                        if (file_exists(OS::path($tmpDir.'/version.php'))) {
                             $pluginName = $this->getPluginComponentFromVersionFile($tmpDir.'/version.php');
                             $pluginPath = $this->getMoodlePluginPath($pluginName);
-                            $targetPath = str_replace('//', '/', getcwd().'/'.$pluginPath);
-                            if (!file_exists($targetPath.'/version.php')) {
+                            $ds = DIRECTORY_SEPARATOR;
+                            // Strip out accidental double dir separators from path.
+                            // TODO - suspect possible bug here - shouldnt be getcwd, should be project dir
+                            // will be fine so long as you run mchef in project root.
+                            $targetPath = str_replace("{$ds}{$ds}", $ds, OS::path(getcwd().$ds.$pluginPath));
+                            if (!file_exists(OS::path($targetPath.'/version.php'))) {
                                 $this->cli->info('Moving plugin from temp folder to ' . $targetPath);
-                                if (!file_exists($targetPath)) {
+                                if (!file_exists($targetPath) && !OS::isWindows()) {
                                     mkdir($targetPath, 0755, true);
                                 }
                                 rename($tmpDir, $targetPath);
@@ -330,7 +337,13 @@ class Plugins extends AbstractService {
                                 // Plugin already present locally.
                                 File::instance()->deleteDir($tmpDir);
                             }
-                            $volume = new Volume(...['path' => $pluginPath, 'hostPath' => $targetPath]);
+                            $volumeHostPath = $targetPath;
+                            if (OS::isWindows()) {
+                                // Volume path for windows needs to use forward slashes to work in docker compose!
+                                $volumeHostPath = Docker::instance($this->cli)->windowsToDockerPath($targetPath);
+                            }
+                            $volume = new Volume(...['path' => $pluginPath, 'hostPath' => $volumeHostPath]);
+
                             $volumes[] = $volume;
                             $plugins[$pluginName] = new Plugin(
                                 $pluginName,

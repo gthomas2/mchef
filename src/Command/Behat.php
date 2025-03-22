@@ -3,6 +3,7 @@
 namespace App\Command;
 
 use App\Exceptions\ExecFailed;
+use App\Helpers\OS;
 use App\Model\Plugin;
 use App\Service\Docker;
 use App\Service\Main;

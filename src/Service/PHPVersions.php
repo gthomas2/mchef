@@ -14,6 +14,11 @@ class PHPVersions extends AbstractService {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $repoUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+        if (defined('CURLSSLOPT_NATIVE_CA')  && version_compare(curl_version()['version'], '7.71', '>=')) {
+            curl_setopt($ch, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
+        }
+
         curl_setopt($ch, CURLOPT_HTTPHEADER, array(
             'User-Agent: PHP'
         ));
