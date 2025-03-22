@@ -37,10 +37,11 @@ class PHPUnit extends AbstractCommand {
         $moodleContainer = $mainService->getDockerMoodleContainerName();
         $cmd = 'docker exec -it '.$moodleContainer.' php /var/www/html/moodle/admin/tool/phpunit/cli/init.php';
         $this->execStream($cmd, 'Failed to initialize phpunit');
-        $runCode = '/var/www/html/moodle/vendor/bin/phpunit';
+        $runCode = 'bash -c "cd /var/www/html/moodle && vendor/bin/phpunit';
 
         $groups = $options->getOpt('group');
         $testsuite = $options->getOpt('testsuite');
+        $filter = $options->getOpt('filter');
 
         $runMsg = 'Executing phpunit tests';
 
@@ -72,9 +73,13 @@ class PHPUnit extends AbstractCommand {
             $runCode .= ' --testsuite='.$testsuite;
             $runMsg .= ' for testsuite '.$testsuite;
         }
-        $this->cli->notice($runCode);
+        if ($filter) {
+            $runCode .= ' --filter='.$filter;
+            $runMsg .= ' with filter '.$filter;
+        }
         $this->cli->notice($runMsg);
-        $cmd = 'docker exec -it '.$moodleContainer.' '.$runCode;
+        $cmd = 'docker exec -it '.$moodleContainer.' '.$runCode.'"';
+        $this->cli->notice($cmd);
 
         $this->execPassthru($cmd, 'Tests failed');
     }
@@ -88,5 +93,7 @@ class PHPUnit extends AbstractCommand {
             'g', 'group', self::COMMAND_NAME);
         $options->registerOption('testsuite', 'Limit your tests to specific test suites. Note - this will override all other options',
             's', 'testsuite', self::COMMAND_NAME);
+        $options->registerOption('filter', 'Filter which tests to run',
+            'f', 'filter', self::COMMAND_NAME);
     }
 }
