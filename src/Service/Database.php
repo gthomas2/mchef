@@ -11,6 +11,7 @@ enum DatabaseType: string {
     case Mysql = 'mysql';
 }
 
+// NOTE - not used (yet)
 class Database extends AbstractService {
 
     use WithRecipe;

@@ -17,9 +17,27 @@ class OS {
     }
 
     public static function path(string $path): string {
-        if (DIRECTORY_SEPARATOR === '/') {
-            return $path;
+        // Expand tilde only if it's the first character
+        if (str_starts_with($path, '~')) {
+            $home = getenv('HOME') ?: getenv('USERPROFILE');
+            if ($home) {
+                $path = $home . substr($path, 1); // skip the tilde
+            }
         }
-        return str_replace('/', DIRECTORY_SEPARATOR, $path);
+
+        // Normalize directory separators
+        if (DIRECTORY_SEPARATOR === '\\') {
+            $path = str_replace('/', DIRECTORY_SEPARATOR, $path);
+        }
+
+        return $path;
+    }
+
+    public static function realPath(string $path): string {
+        $resolved = realpath(self::path($path));
+        if ($resolved === false) {
+            throw new \RuntimeException("Path does not exist: $path");
+        }
+        return $resolved;
     }
 }

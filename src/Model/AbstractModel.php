@@ -40,5 +40,17 @@ abstract class AbstractModel {
         }
         // TODO ...
     }
+
+    public static function fromJSONFile(string $filePath) {
+        if (!file_exists($filePath)) {
+            throw new Exception('Invalid JSON file '.$filePath);
+        }
+        return self::fromJSON(file_get_contents($filePath));
+    }
+
+    public function toJSONFile(string $filePath) {
+        $contents = json_encode($this);
+        file_put_contents($filePath, $contents);
+    }
 }
 

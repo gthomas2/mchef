@@ -170,5 +170,7 @@ class Recipe extends AbstractModel {
         public ?string $wwwRoot = null,
 
         public ?string $behatWwwRoot = null,
+
+        public ?string $lang = null
     ) {}
 }

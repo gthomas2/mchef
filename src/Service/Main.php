@@ -163,7 +163,7 @@ class Main extends AbstractService {
             $dbnotready = true;
             $dbCheckCmd = 'docker exec ' . escapeshellarg($dbContainer) . ' sh -c ' . escapeshellarg('psql -U ' . $recipe->dbUser . ' -d ' . $recipe->dbName . ' -c "SELECT 1" > /dev/null 2>&1');
 
-            
+
             while ($dbnotready) {
                 exec($dbCheckCmd, $output, $returnVar);
                 if ($returnVar === 0) {
@@ -183,7 +183,7 @@ class Main extends AbstractService {
                 // For Linux, use `sh` as the shell
                 $dbSchemaInstalledCmd = $dockerDbExecBase . ' sh -c "psql -U ' . $recipe->dbUser . ' -d ' . $recipe->dbName . ' -c \\"SELECT * FROM mdl_course\\" > /dev/null 2>&1 || exit 1"';
             }
-            
+
             // Execute the command
             exec($dbSchemaInstalledCmd, $output, $returnVar);
             $dbSchemaInstalled = $returnVar === 0;
@@ -361,15 +361,12 @@ class Main extends AbstractService {
 
     }
 
-    public function establishInstanceId(): string {
-        $instancePath = $this->getChefPath().'/instance.txt';
-        if (file_exists($instancePath)) {
-            return file_get_contents($instancePath);
+    private function getRegisteredUuid(string $chefPath): ?string {
+        $path = OS::path($chefPath.'/registry_uuid.txt');
+        if (file_exists($path)) {
+            return trim(file_get_contents($path));
         }
-        // Create new instance uniqId.
-        $instanceId = uniqid(base64_encode(__FILE__));
-        file_put_contents($instancePath, $instanceId);
-        return $instanceId;
+        return null;
     }
 
     public function create(string $recipeFilePath) {
@@ -435,6 +432,10 @@ class Main extends AbstractService {
 
         copy($recipeFilePath, $chefPath.'/recipe.json');
 
+        $regUuid = $this->getRegisteredUuid($chefPath);
+        $this->cli->notice('Registering instance in main config');
+        Configurator::instance($this->cli)->registerInstance($recipeJsonFilePath, $regUuid);
+
         $dockerData->dockerFile = $dockerPath.'/Dockerfile';
         file_put_contents($dockerData->dockerFile, $dockerFileContents);
 
@@ -472,18 +473,20 @@ class Main extends AbstractService {
         return $this->pluginsService;
     }
 
-    private function getDockerContainerName(string $suffix) {
-        if (empty($this->recipe)) {
+    private function getDockerContainerName(string $suffix, ?Recipe $recipe = null) {
+        $recipe = $recipe ?? $this->recipe;
+        if (empty($recipe)) {
             $this->getRecipe();
+            $recipe = $this->recipe;
         }
-        return $this->recipe->containerPrefix.'-'.$suffix;
+        return $recipe->containerPrefix.'-'.$suffix;
     }
 
-    public function getDockerMoodleContainerName() {
-        return $this->getDockerContainerName('moodle');
+    public function getDockerMoodleContainerName(?Recipe $recipe = null) {
+        return $this->getDockerContainerName('moodle', $recipe);
     }
 
-    public function getDockerDatabaseContainerName() {
-        return $this->getDockerContainerName('db');
+    public function getDockerDatabaseContainerName(?Recipe $recipe = null) {
+        return $this->getDockerContainerName('db', $recipe);
     }
 }

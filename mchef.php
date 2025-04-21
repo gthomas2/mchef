@@ -67,16 +67,20 @@ class MChefCLI extends CLI {
     }
 
     protected function main(Options $options) {
+        $this->main = \App\Service\Main::instance($this);
+
         if ($cmd = $options->getCmd()) {
             $class = 'App\\Command\\'.ucfirst($cmd);
             if (!class_exists($class)) {
-                throw new \splitbrain\phpcli\Exception('Invalid command! Command not implemented.');
+                $cli = \App\Service\CliService::instance();
+                $class = $cli->locateCommandClass($cmd);
+                if (!$class || !class_exists($class)) {
+                    throw new \splitbrain\phpcli\Exception('Invalid command! Command not implemented.');
+                }
             }
             $class::instance($this)->execute($options);
             return;
         }
-
-        $this->main = \App\Service\Main::instance($this);
 
         if ($args = $options->getArgs()) {
             $recipe = $args[0];
@@ -104,20 +108,29 @@ class MChefCLI extends CLI {
      * @param callable|null $onNo
      * @return mixed
      */
-    public function promptYesNo(string $msg, ?callable $onYes = null, ?callable $onNo = null) {
-        $msg .= ' [y/N] ';
-        $input = readline($msg);
-        if (trim(strtolower($input)) === 'y' || trim(strtolower($input)) === 'yes') {
-            if ($onYes) {
-                return $onYes($input);
-            }
-            return;
+    public function promptYesNo(
+        string $msg,
+        ?callable $onYes = null,
+        ?callable $onNo = null,
+        string $default = 'n'
+    ): mixed {
+        $suffix = $default === 'y' ? '[Y/n]' : '[y/N]';
+        $input = readline("$msg $suffix ");
+        $input = trim($input);
+
+        if ($input === '') {
+            $input = $default;
         }
-        if ($onNo) {
-            return $onNo($input);
+
+        $normalized = strtolower($input);
+
+        if (in_array($normalized, ['y', 'yes'], true)) {
+            return $onYes ? $onYes($input) : true;
         }
-        return $input;
+
+        return $onNo ? $onNo($input) : false;
     }
+
 }
 
 $cli = new MChefCLI();
