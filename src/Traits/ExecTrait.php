@@ -23,7 +23,10 @@ trait ExecTrait {
         return preg_replace($pattern, $useOutput, $errorMsg);
     }
 
-    protected function exec(string $cmd, ?string $errorMsg = null): string {
+    protected function exec(string $cmd, ?string $errorMsg = null, ?bool $silent = false): string {
+        if ($silent) {
+            $cmd .= ' 2>&1';
+        }
         if ($this->verbose && !empty($this->cli)) {
             $this->cli->info($cmd);
         }

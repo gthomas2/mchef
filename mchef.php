@@ -61,7 +61,6 @@ class MChefCLI extends CLI {
         $this->registerCommands($options);
         $options->registerArgument('recipe', 'File location of recipe', false);
         $options->registerOption('start', 'Start all containers associated with this recipe', 's');
-        $options->registerOption('halt', 'Stop all containers associated with this recipe', 'h');
         $options->registerOption('installexec', 'Install executable version of mchef.php to users bin folder', 'i');
         $options->registerOption('version', 'Print version', 'v');
     }
@@ -84,7 +83,7 @@ class MChefCLI extends CLI {
 
         if ($args = $options->getArgs()) {
             $recipe = $args[0];
-            $this->main->create($recipe);
+            $this->main->up($recipe);
             return;
         }
         if ($options->getOpt('installexec')) {
@@ -94,8 +93,6 @@ class MChefCLI extends CLI {
             $this->info(self::$version);
         } else if ($options->getOpt('start')) {
             $this->main->startContainers();
-        } else if ($options->getOpt('halt')) {
-            $this->main->stopContainers();
         } else {
             echo $options->help();
         }

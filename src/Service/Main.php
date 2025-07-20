@@ -38,6 +38,11 @@ class Main extends AbstractService {
      */
     private \Twig\Environment $twig;
 
+    /**
+     * @var string|null $chefPath
+     */
+    private ?string $chefPath = null;
+
     protected function __construct() {
         $loader = new \Twig\Loader\FilesystemLoader(__DIR__.'/../../templates');
         $loader->addPath(__DIR__.'/../../templates/moodle', 'moodle');
@@ -51,12 +56,16 @@ class Main extends AbstractService {
     }
 
     public function getChefPath($failOnNotFound = false): ?string {
+        if ($this->chefPath) {
+            return $this->chefPath;
+        }
         $chefPath =  File::instance()->findFileInOrAboveDir('.mchef');
         if ($failOnNotFound && !is_dir($chefPath)) {
             $this->cli->alert('Your current working directory, or the directories above it, do not contain a .mchef directory');
             die;
         }
-        return $chefPath;
+        $this->chefPath = $chefPath;
+        return $this->chefPath;
     }
 
     public function getDockerPath() {
@@ -84,7 +93,6 @@ class Main extends AbstractService {
     public function startContainers(): void {
         $this->cli->notice('Starting containers');
         $dockerService = Docker::instance($this->cli);
-        $recipe = $this->getRecipe();
         $moodleContainer = $this->getDockerMoodleContainerName();
         $dockerService->startDockerContainer($moodleContainer);
         $dbContainer = $this->getDockerDatabaseContainerName();
@@ -125,8 +133,7 @@ class Main extends AbstractService {
 
     private function configureDockerNetwork(Recipe $recipe): void {
         $dockerService = Docker::instance($this->cli);
-        //$networkName = $recipe->containerPrefix.'-network';
-        // TODO - default should be mc-network unless defined in recipe.
+        // TODO LOW priority- default should be mc-network unless defined in recipe or main config.
         $networkName = 'mc-network';
 
         if ($dockerService->networkExists($networkName)) {
@@ -193,8 +200,13 @@ class Main extends AbstractService {
                 $this->cli->notice('DB already installed. Skipping installation');
             } else {
                 $this->cli->notice('Installing DB');
+                
+                // Get language from global config, default to 'en' if not set
+                $globalConfig = Configurator::instance($this->cli)->getMainConfig();
+                $lang = $globalConfig->lang ?? 'en';
+                
                 $installoptions =
-                    '/var/www/html/moodle/admin/cli/install_database.php --lang=de --adminpass=123456 --adminemail=admin@example.com --agree-license --fullname=mchef-MOODLE --shortname=mchefMOODLE';
+                    '/var/www/html/moodle/admin/cli/install_database.php --lang=' . $lang . ' --adminpass=123456 --adminemail=admin@example.com --agree-license --fullname=mchef-MOODLE --shortname=mchefMOODLE';
                 $cmdinstall = 'docker exec ' . $moodleContainer . ' php ' . $installoptions;
 
                 // Try to install
@@ -361,7 +373,7 @@ class Main extends AbstractService {
 
     }
 
-    private function getRegisteredUuid(string $chefPath): ?string {
+    public function getRegisteredUuid(string $chefPath): ?string {
         $path = OS::path($chefPath.'/registry_uuid.txt');
         if (file_exists($path)) {
             return trim(file_get_contents($path));
@@ -369,8 +381,8 @@ class Main extends AbstractService {
         return null;
     }
 
-    public function create(string $recipeFilePath) {
-        $recipeFilePath=OS::path($recipeFilePath);
+    public function up(string $recipeFilePath): void {
+        $recipeFilePath = OS::path($recipeFilePath);
         $this->cli->notice('Cooking up recipe '.$recipeFilePath);
         if (stripos(getcwd(), 'moodle-chef') !== false) {
             throw new Exception('You should not run mchef from within the moodle-chef folder.'.
@@ -379,7 +391,7 @@ class Main extends AbstractService {
                 "\nAt that point you should be able to call mchef.php without prefixing with the php command."
             );
         }
-        $recipe = $this->parseRecipe($recipeFilePath);
+        $recipe = $this->getRecipe($recipeFilePath);
 
         $directory = OS::path(getcwd() . '/.mchef'); // Get the current working directory and append '.mchef'
         if (!is_dir($directory)) {
@@ -434,7 +446,7 @@ class Main extends AbstractService {
 
         $regUuid = $this->getRegisteredUuid($chefPath);
         $this->cli->notice('Registering instance in main config');
-        Configurator::instance($this->cli)->registerInstance($recipeJsonFilePath, $regUuid);
+        Configurator::instance($this->cli)->registerInstance(realPath($recipeFilePath), $regUuid, $recipe->containerPrefix);
 
         $dockerData->dockerFile = $dockerPath.'/Dockerfile';
         file_put_contents($dockerData->dockerFile, $dockerFileContents);
@@ -452,12 +464,12 @@ class Main extends AbstractService {
         $this->configureDockerNetwork($recipe);
     }
 
-    public function getRecipe(): Recipe {
+    public function getRecipe(?string $recipeFilePath = null): Recipe {
         if ($this->recipe) {
             return $this->recipe;
         }
         $mchefPath = $this->getChefPath();
-        $recipeFilePath = $mchefPath.'/recipe.json';
+        $recipeFilePath = $recipeFilePath ?? $mchefPath.'/recipe.json';
         if (!file_exists($recipeFilePath)) {
             $this->cli->error('Have you run mchef.php [recipefile]? Recipe not present at '.$recipeFilePath);
         }
@@ -473,10 +485,10 @@ class Main extends AbstractService {
         return $this->pluginsService;
     }
 
-    private function getDockerContainerName(string $suffix, ?Recipe $recipe = null) {
+    private function getDockerContainerName(string $suffix, ?Recipe $recipe = null, ?string $recipeFilePath = null) {
         $recipe = $recipe ?? $this->recipe;
         if (empty($recipe)) {
-            $this->getRecipe();
+            $this->getRecipe($recipeFilePath);
             $recipe = $this->recipe;
         }
         return $recipe->containerPrefix.'-'.$suffix;

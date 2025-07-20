@@ -6,6 +6,7 @@ use App\Helpers\OS;
 use App\Model\Plugin;
 use App\Model\PluginsInfo;
 use App\Model\Recipe;
+use App\Model\RecipePlugin;
 use App\Model\Volume;
 use PHPUnit\Framework\MockObject\MockObject;
 use splitbrain\phpcli\CLI;
@@ -210,12 +211,27 @@ class Plugins extends AbstractService {
      * @param string $url
      * @param string $branch
      * @param string $path
+     * @param string|null $upstream
+     * @throws Exception
      */
-    private function cloneGithubRepository($url, $branch, $path) {
+    private function cloneGithubRepository($url, $branch, $path, ?string $upstream = null) {
 
         if (empty($branch)) {
             $cmd = "git clone $url $path";
         } else {
+            // First check if the branch exists on the remote repository
+            $checkBranchCmd = "git ls-remote --heads $url $branch";
+            exec($checkBranchCmd, $branchOutput, $branchReturnVar);
+            
+            if ($branchReturnVar != 0) {
+                throw new Exception("Error checking remote repository: " . implode("\n", $branchOutput));
+            }
+            
+            // If no output, the branch doesn't exist
+            if (empty($branchOutput)) {
+                throw new Exception("Branch '$branch' does not exist for repository '$url'");
+            }
+            
             $cmd = "git clone $url --branch $branch $path";
         }
 
@@ -223,6 +239,29 @@ class Plugins extends AbstractService {
 
         if ($returnVar != 0) {
             throw new Exception("Error cloning repository: " . implode("\n", $output));
+        }
+
+        // Add upstream remote if specified
+        if (!empty($upstream)) {
+            // Check if the upstream branch exists on the upstream repository
+            $checkUpstreamBranchCmd = "git ls-remote --heads $upstream $branch";
+            exec($checkUpstreamBranchCmd, $upstreamOutput, $upstreamReturnVar);
+            
+            if ($upstreamReturnVar != 0) {
+                $this->cli->warning("Could not check upstream repository '$upstream': " . implode("\n", $upstreamOutput));
+            } elseif (empty($upstreamOutput)) {
+                $this->cli->warning("Branch '$branch' does not exist on upstream repository '$upstream'");
+            } else {
+                // Add upstream remote
+                $addUpstreamCmd = "cd $path && git remote add upstream $upstream";
+                exec($addUpstreamCmd, $upstreamAddOutput, $upstreamAddReturnVar);
+                
+                if ($upstreamAddReturnVar != 0) {
+                    $this->cli->warning("Failed to add upstream remote: " . implode("\n", $upstreamAddOutput));
+                } else {
+                    $this->cli->info("Added upstream remote '$upstream' for repository");
+                }
+            }
         }
     }
 
@@ -266,18 +305,18 @@ class Plugins extends AbstractService {
         $pInfoRecipeSources = array_map(
             function(Plugin $plugin) {
 
-                [$repo, ] = $this->extractRepoInfoFromPlugin($plugin->recipeSrc);
+                $recipePlugin = $this->extractRepoInfoFromPlugin($plugin->recipeSrc);
 
-                return $repo;
+                return $recipePlugin->repo;
 
          }, $pluginsInfo->plugins);
 
         $recipePlugins = array_map(
             function($plugin) {
 
-                [$repo, ] = $this->extractRepoInfoFromPlugin($plugin);
+                $recipePlugin = $this->extractRepoInfoFromPlugin($plugin);
 
-                return $repo;
+                return $recipePlugin->repo;
 
             }, $recipe->plugins);
 
@@ -307,14 +346,14 @@ class Plugins extends AbstractService {
         $plugins = [];
         foreach ($recipe->plugins as $plugin) {
 
-            [$repo, $repoBranch] = $this->extractRepoInfoFromPlugin($plugin);
+            $recipePlugin = $this->extractRepoInfoFromPlugin($plugin);
 
             // Only support single github hosted plugins for now.
-            if (strpos($repo, 'https://github.com') === 0 || strpos($repo, 'git@github.com') === 0) {
+            if (strpos($recipePlugin->repo, 'https://github.com') === 0 || strpos($recipePlugin->repo, 'git@github.com') === 0) {
                 if ($recipe->cloneRepoPlugins) {
                     $tmpDir = sys_get_temp_dir().'/'.uniqid('', true);
 
-                    $this->cloneGithubRepository($repo, $repoBranch, $tmpDir);
+                    $this->cloneGithubRepository($recipePlugin->repo, $recipePlugin->branch, $tmpDir, $recipePlugin->upstream);
                     $versionFiles = $this->findMoodleVersionFiles($tmpDir);
                     if (count($versionFiles) === 1) {
                         // Repository is a single plugin.
@@ -480,21 +519,29 @@ class Plugins extends AbstractService {
      *
      * @param mixed $plugin
      *
-     * @return array
+     * @return RecipePlugin
      */
-    private function extractRepoInfoFromPlugin(mixed $plugin): array {
+    private function extractRepoInfoFromPlugin(mixed $plugin): RecipePlugin {
 
         if (is_object($plugin) && empty($plugin->repo)) {
-
             throw new Exception('Repo not set in plugin recipe');
         }
 
         if (is_object($plugin)) {
-
-            return [$plugin->repo, $plugin->branch];
+            return new RecipePlugin(
+                repo: $plugin->repo,
+                branch: $plugin->branch ?? 'master',
+                upstream: $plugin->upstream ?? null
+            );
         }
 
-        return [$plugin, ''];
+        // Handle string format: "url" or "url~branch"
+        if (str_contains($plugin, '~')) {
+            [$repo, $branch] = explode('~', $plugin, 2);
+            return new RecipePlugin(repo: $repo, branch: $branch);
+        }
+
+        return new RecipePlugin(repo: $plugin);
     }
 
 }

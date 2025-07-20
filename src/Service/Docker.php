@@ -166,7 +166,8 @@ class Docker extends AbstractService {
     public function checkContainerRunning(string $containerName) {
         $cmd = "docker inspect -f {{.State.Running}} $containerName";
         $onErrorMsg = 'Failed to get container running status for '.$containerName;
-        return $this->exec($cmd, $onErrorMsg) === 'true';
+        // We need to exec silently or it will show errors if the container has been deleted.
+        return $this->exec($cmd, $onErrorMsg, true) === 'true';
     }
 
     public function checkPortAvailable(int $port): bool {
@@ -189,13 +190,13 @@ class Docker extends AbstractService {
     public function windowsToDockerPath($windowsPath) {
         // Replace backslashes with forward slashes
         $dockerPath = str_replace("\\", "/", $windowsPath);
-        
+
         // Convert the drive letter (e.g., 'C:') to the corresponding Unix-style path
         if (preg_match('/^[A-Za-z]:\//', $dockerPath)) {
             // Change the drive letter (e.g., C:\) to /c/
             $dockerPath = "/" . strtolower($dockerPath[0]) . substr($dockerPath, 2);
         }
-    
+
         return $dockerPath;
     }
 }

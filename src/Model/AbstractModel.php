@@ -38,7 +38,7 @@ abstract class AbstractModel {
         if (is_array($object)) {
             throw new Exception('Root json as array not supported');
         }
-        // TODO ...
+        return self::fromData($object);
     }
 
     public static function fromJSONFile(string $filePath) {

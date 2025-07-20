@@ -34,14 +34,6 @@ class Bash extends AbstractCommand {
     }
 
     public function register(Options $options): void {
-        $options->registerCommand(self::COMMAND_NAME, 'Allows behat tests to be run against plugins defined in the recipe file.');
-        $options->registerArgument('feature', 'Specific feature file to run.', false, self::COMMAND_NAME);
-        $options->registerOption('plugins',
-            'Plugin frankenstyle names to run behat tests against. Omit this argument for all plugins. For multiple plugins, separate using a comma.',
-            'p', 'plugins', self::COMMAND_NAME);
-        $options->registerOption('tags', 'Limit your tests to features and steps containing specific tags - e.g @javascript',
-            't', 'tags', self::COMMAND_NAME);
-        $options->registerOption('verbose', 'Output more information', 'v', false, self::COMMAND_NAME);
-        $options->registerOption('profile', 'Use a specific profile', null, 'profile', self::COMMAND_NAME);
+        $options->registerCommand(self::COMMAND_NAME, 'Establish a bash shell on the container');
     }
 }

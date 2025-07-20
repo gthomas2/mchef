@@ -25,7 +25,7 @@ class Recipe extends AbstractModel {
         public string $phpVersion,
 
         /**
-         * @var string - recipe name.
+         * @var string - recipe name NOTE: THIS IS A UNIQUE IDENTIFIER FOR YOUR RECIPE.
          */
         public ?string $name = null,
 

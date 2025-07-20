@@ -6,7 +6,8 @@
     "https://github.com/marcusgreen/moodle-qtype_gapfill.git",
     "https://github.com/gthomas2/moodle-filter_imageopt",
     {
-      "repo": "https://github.com/open-lms-open-source/moodle-theme_snap.git",
+      "repo": "https://github.com/gthomas2/moodle-theme_snap.git",
+      "upstream": "https://github.com/open-lms-open-source/moodle-theme_snap.git",
       "branch": "MOODLE_401_STABLE"
     }
   ],

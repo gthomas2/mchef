@@ -37,16 +37,18 @@ class ListAll extends AbstractCommand {
             if (!file_exists($instance->recipePath)) {
                 $this->cli->warning('⚠️ Recipe missing '.$instance->recipePath);
             }
+
             $recipe = $recipeParser->parse($instance->recipePath);
             $moodleContainerName = $main->getDockerMoodleContainerName($recipe);
+
             try {
                 $running = $docker->checkContainerRunning($moodleContainerName);
             } catch (\Exception $e) {
                 $running = false; // Assume not running.
             }
 
-            $symbol = $running ? '✅' : '⏸️';
-            echo($symbol.' '.$moodleContainerName.' - '.($running ? 'up' : 'down'))."\n";
+            $symbol = $running ? '✅' : '⏸️ '; // Not sure why but we need an extra space after pause!
+            echo($symbol.' '.$instance->containerPrefix.' - '.($running ? 'up' : 'inactive'))."\n";
 
         }
     }
