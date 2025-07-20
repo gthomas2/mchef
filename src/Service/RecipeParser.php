@@ -16,17 +16,15 @@ class RecipeParser extends AbstractService {
             throw new Exception('Recipe file does not exist - '.$filePath);
         }
         $contents = file_get_contents($filePath);
+        
         try {
-            $object = json_decode($contents);
+            $recipe = ModelJSONDeserializer::instance()->deserialize($contents, Recipe::class);
         } catch (\Exception $e) {
             throw new Exception('Failed to decode recipe JSON. Recipe: '.$filePath, 0, $e);
         }
-        if (empty($object)) {
-            throw new Exception('Failed to decode recipe JSON. Recipe: '.$filePath);
-        }
-        $this->validate($object, $filePath);
-
-        $recipe = new Recipe(...(array) $object);
+        
+        // Validate required properties
+        $this->validateRecipe($recipe, $filePath);
 
         $this->setDefaults($recipe);
         $recipe->setRecipePath($filePath);
@@ -34,22 +32,14 @@ class RecipeParser extends AbstractService {
         return $recipe;
     }
 
-    private function validate(stdClass $object, string $filePath) {
-        $requiredProps = [
-            'moodleTag',
-            'phpVersion'
-        ];
-
-        foreach ($requiredProps as $requiredProp) {
-            if (!property_exists($object, $requiredProp)) {
-                throw new Exception("Missing property in recipe \"$requiredProp\" - . Recipe: $filePath");
-            }
-        }
-
+    private function validateRecipe(Recipe $recipe, string $filePath) {
+        // Validate required properties - these are already validated by the constructor
+        // but we can add additional business logic validation here
+        
         $validPHPVersions = (PHPVersions::instance())->listVersions();
-        if (!in_array($object->phpVersion, $validPHPVersions)) {
+        if (!in_array($recipe->phpVersion, $validPHPVersions)) {
             $supported = implode(', ', $validPHPVersions);
-            throw new Exception("Unsupported php version $object->phpVersion - supported versions are $supported");
+            throw new Exception("Unsupported php version $recipe->phpVersion - supported versions are $supported");
         }
     }
 

@@ -19,14 +19,34 @@ final class PluginsServiceTest extends TestCase {
         $this->assertEquals('/local/test', $path);
     }
 
-    //public function testGetPluginsInfoFromRecipe(): void {
-    //    $mockCli = $this->createMock(splitbrain\phpcli\CLI::class);
-    //    $pluginsService = Plugins::instance($mockCli);
-    //    $recipeService = \App\Service\RecipeParser::instance();
-    //    $recipe = $recipeService->parse(__DIR__.'/Fixtures/test-mrecipe.json');
-    //    var_dump($pluginsService->getPluginsInfoFromRecipe($recipe));
-    //
-    //}
+    public function testGetPluginsInfoFromRecipe(): void {
+        $mockCli = $this->createMock(splitbrain\phpcli\CLI::class);
+        $pluginsService = Plugins::instance($mockCli);
+        
+        // Test with null plugins - this should return null without any complex processing
+        $recipeWithoutPlugins = new Recipe(
+            moodleTag: 'v4.1.0',
+            phpVersion: '8.0',
+            plugins: null
+        );
+        $recipeWithoutPlugins->setRecipePath('/tmp/test-recipe.json');
+        $result = $pluginsService->getPluginsInfoFromRecipe($recipeWithoutPlugins);
+        $this->assertNull($result);
+        
+        // Test with empty plugins array - this should also return null
+        $recipeWithEmptyPlugins = new Recipe(
+            moodleTag: 'v4.1.0',
+            phpVersion: '8.0',
+            plugins: []
+        );
+        $recipeWithEmptyPlugins->setRecipePath('/tmp/test-recipe.json');
+        $result = $pluginsService->getPluginsInfoFromRecipe($recipeWithEmptyPlugins);
+        $this->assertNull($result);
+        
+        // For more complex cases involving actual plugin processing,
+        // those would require integration tests with actual file system setup
+        // The basic null/empty validation is the main logic we want to verify here
+    }
 
     public function testGetPluginComponentFromVersionFile(): void {
         $mockCli = $this->createMock(splitbrain\phpcli\CLI::class);
