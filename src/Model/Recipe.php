@@ -2,6 +2,8 @@
 
 namespace App\Model;
 
+use App\Attributes\ArrayOf;
+
 class Recipe extends AbstractModel {
     private string $_recipePath;
 
@@ -42,6 +44,7 @@ class Recipe extends AbstractModel {
         /**
          * @var array
          */
+        #[ArrayOf('string', RecipePlugin::class)]
         public ?array $plugins = null,
 
         /**

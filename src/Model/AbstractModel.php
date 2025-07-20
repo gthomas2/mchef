@@ -31,14 +31,7 @@ abstract class AbstractModel {
     }
 
     public static function fromJSON(string $json) {
-        $object = json_decode($json);
-        if (!$object) {
-            throw new Exception('Failed to decode json for model '.get_called_class().' - '.$json);
-        }
-        if (is_array($object)) {
-            throw new Exception('Root json as array not supported');
-        }
-        return self::fromData($object);
+        return \App\Service\ModelJSONDeserializer::instance()->deserialize($json, static::class);
     }
 
     public static function fromJSONFile(string $filePath) {
