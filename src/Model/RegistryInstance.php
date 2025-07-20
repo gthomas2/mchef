@@ -17,5 +17,10 @@ class RegistryInstance extends AbstractModel {
          */
         public string $recipePath,
 
+        /**
+         * @var string - container prefix from recipe.
+         */
+        public string $containerPrefix,
+
     ) {}
 }

@@ -1,6 +1,7 @@
 <?php declare(strict_types=1);
 
 use App\Model\Plugin;
+use App\Model\RecipePlugin;
 use App\Model\Volume;
 use App\Model\PluginsInfo;
 use App\Model\Recipe;
@@ -18,14 +19,34 @@ final class PluginsServiceTest extends TestCase {
         $this->assertEquals('/local/test', $path);
     }
 
-    //public function testGetPluginsInfoFromRecipe(): void {
-    //    $mockCli = $this->createMock(splitbrain\phpcli\CLI::class);
-    //    $pluginsService = Plugins::instance($mockCli);
-    //    $recipeService = \App\Service\RecipeParser::instance();
-    //    $recipe = $recipeService->parse(__DIR__.'/Fixtures/test-mrecipe.json');
-    //    var_dump($pluginsService->getPluginsInfoFromRecipe($recipe));
-    //
-    //}
+    public function testGetPluginsInfoFromRecipe(): void {
+        $mockCli = $this->createMock(splitbrain\phpcli\CLI::class);
+        $pluginsService = Plugins::instance($mockCli);
+        
+        // Test with null plugins - this should return null without any complex processing
+        $recipeWithoutPlugins = new Recipe(
+            moodleTag: 'v4.1.0',
+            phpVersion: '8.0',
+            plugins: null
+        );
+        $recipeWithoutPlugins->setRecipePath('/tmp/test-recipe.json');
+        $result = $pluginsService->getPluginsInfoFromRecipe($recipeWithoutPlugins);
+        $this->assertNull($result);
+        
+        // Test with empty plugins array - this should also return null
+        $recipeWithEmptyPlugins = new Recipe(
+            moodleTag: 'v4.1.0',
+            phpVersion: '8.0',
+            plugins: []
+        );
+        $recipeWithEmptyPlugins->setRecipePath('/tmp/test-recipe.json');
+        $result = $pluginsService->getPluginsInfoFromRecipe($recipeWithEmptyPlugins);
+        $this->assertNull($result);
+        
+        // For more complex cases involving actual plugin processing,
+        // those would require integration tests with actual file system setup
+        // The basic null/empty validation is the main logic we want to verify here
+    }
 
     public function testGetPluginComponentFromVersionFile(): void {
         $mockCli = $this->createMock(splitbrain\phpcli\CLI::class);
@@ -111,4 +132,66 @@ final class PluginsServiceTest extends TestCase {
         $pluginsService->getPluginByComponentName('mod_assign', $pluginsInfo);
     }
     
+    public function testExtractRepoInfoFromPluginString(): void {
+        $mockCli = $this->createMock(splitbrain\phpcli\CLI::class);
+        $pluginsService = Plugins::instance($mockCli);
+        
+        // Test simple URL string
+        $result = $this->callRestricted($pluginsService, 'extractRepoInfoFromPlugin', ['https://github.com/user/repo.git']);
+        $this->assertInstanceOf(RecipePlugin::class, $result);
+        $this->assertEquals('https://github.com/user/repo.git', $result->repo);
+        $this->assertEquals('master', $result->branch);
+        $this->assertNull($result->upstream);
+        
+        // Test URL with branch
+        $result = $this->callRestricted($pluginsService, 'extractRepoInfoFromPlugin', ['https://github.com/user/repo.git~develop']);
+        $this->assertInstanceOf(RecipePlugin::class, $result);
+        $this->assertEquals('https://github.com/user/repo.git', $result->repo);
+        $this->assertEquals('develop', $result->branch);
+        $this->assertNull($result->upstream);
+    }
+
+    public function testExtractRepoInfoFromPluginObject(): void {
+        $mockCli = $this->createMock(splitbrain\phpcli\CLI::class);
+        $pluginsService = Plugins::instance($mockCli);
+        
+        // Test object with all properties
+        $plugin = (object)[
+            'repo' => 'https://github.com/user/repo.git',
+            'branch' => 'feature-branch',
+            'upstream' => 'https://github.com/upstream/repo.git'
+        ];
+        $result = $this->callRestricted($pluginsService, 'extractRepoInfoFromPlugin', [$plugin]);
+        $this->assertInstanceOf(RecipePlugin::class, $result);
+        $this->assertEquals('https://github.com/user/repo.git', $result->repo);
+        $this->assertEquals('feature-branch', $result->branch);
+        $this->assertEquals('https://github.com/upstream/repo.git', $result->upstream);
+        
+        // Test object with minimal properties
+        $plugin = (object)[
+            'repo' => 'https://github.com/user/repo.git'
+        ];
+        $result = $this->callRestricted($pluginsService, 'extractRepoInfoFromPlugin', [$plugin]);
+        $this->assertInstanceOf(RecipePlugin::class, $result);
+        $this->assertEquals('https://github.com/user/repo.git', $result->repo);
+        $this->assertEquals('master', $result->branch);
+        $this->assertNull($result->upstream);
+    }
+
+    public function testExtractRepoInfoFromPluginWithUpstream(): void {
+        $mockCli = $this->createMock(splitbrain\phpcli\CLI::class);
+        $pluginsService = Plugins::instance($mockCli);
+        
+        // Test the example from the recipe JSON
+        $plugin = (object)[
+            'repo' => 'https://github.com/gthomas2/moodle-theme_snap.git',
+            'upstream' => 'https://github.com/open-lms-open-source/moodle-theme_snap.git',
+            'branch' => 'MOODLE_401_STABLE'
+        ];
+        $result = $this->callRestricted($pluginsService, 'extractRepoInfoFromPlugin', [$plugin]);
+        $this->assertInstanceOf(RecipePlugin::class, $result);
+        $this->assertEquals('https://github.com/gthomas2/moodle-theme_snap.git', $result->repo);
+        $this->assertEquals('MOODLE_401_STABLE', $result->branch);
+        $this->assertEquals('https://github.com/open-lms-open-source/moodle-theme_snap.git', $result->upstream);
+    }
 }

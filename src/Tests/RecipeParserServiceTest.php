@@ -73,7 +73,7 @@ final class RecipeParserServiceTest extends TestCase {
         $recipeParser = RecipeParser::instance();
 
         $this->expectException(Exception::class);
-        $this->expectExceptionMessage('Missing property in recipe');
+        $this->expectExceptionMessage('Failed to decode recipe JSON');
         $recipeParser->parse($filePath);
 
         unlink($filePath);

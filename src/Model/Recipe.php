@@ -2,6 +2,8 @@
 
 namespace App\Model;
 
+use App\Attributes\ArrayOf;
+
 class Recipe extends AbstractModel {
     private string $_recipePath;
 
@@ -25,7 +27,7 @@ class Recipe extends AbstractModel {
         public string $phpVersion,
 
         /**
-         * @var string - recipe name.
+         * @var string - recipe name NOTE: THIS IS A UNIQUE IDENTIFIER FOR YOUR RECIPE.
          */
         public ?string $name = null,
 
@@ -42,6 +44,7 @@ class Recipe extends AbstractModel {
         /**
          * @var array
          */
+        #[ArrayOf('string', RecipePlugin::class)]
         public ?array $plugins = null,
 
         /**

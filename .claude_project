@@ -1,0 +1,150 @@
+{
+  "name": "Moodle Chef",
+  "description": "A Docker-based development environment manager for Moodle utilizing recipes for configuration of moodle versions, environment and plugins",
+  "overview": "Moodle Chef (mchef) is a CLI tool that wraps docker, providing a development environments for Moodle projects. It supports automatic plugin installation from GitHub repositories, database management, and development tools integration including PHPUnit, Behat, and Xdebug.",
+  "primaryLanguage": "PHP",
+  "technologies": [
+    "PHP 8.2+",
+    "Docker",
+    "Docker Compose",
+    "Git",
+    "PostgreSQL/MySQL",
+    "Composer",
+    "PHPUnit",
+    "Behat",
+    "Xdebug",
+    "Twig"
+  ],
+  "architecture": {
+    "type": "CLI Application",
+    "patterns": [
+      "Command Pattern",
+      "Service Layer",
+      "Singleton Pattern",
+      "Model-View-Controller (for CLI)",
+      "Factory Pattern"
+    ],
+    "structure": {
+      "bin/": "Executable entry point",
+      "src/": "Main application source code",
+      "src/Command/": "CLI commands implementation",
+      "src/Service/": "Business logic services",
+      "src/Model/": "Data models and entities",
+      "src/Traits/": "Reusable functionality traits",
+      "src/Helpers/": "Utility classes",
+      "src/Tests/": "Unit tests",
+      "templates/": "Twig templates for Docker and Moodle configuration"
+    }
+  },
+  "keyFeatures": [
+    "Docker-based Moodle development environments",
+    "GitHub plugin repository cloning with branch support",
+    "Upstream repository management for forked plugins",
+    "Automatic Moodle plugin path detection and installation",
+    "Database container management (PostgreSQL/MySQL)",
+    "Development tools integration (PHPUnit, Behat, Xdebug)",
+    "Recipe-based configuration management",
+    "Plugin caching and validation",
+    "Host file management",
+    "Multi-container orchestration"
+  ],
+  "coreComponents": {
+    "CLI Framework": "splitbrain/php-cli for command-line interface",
+    "Template Engine": "Twig for Docker and configuration file generation",
+    "Container Management": "Docker and Docker Compose orchestration",
+    "Plugin Management": "Git-based plugin installation and management",
+    "Configuration": "JSON-based recipe system for environment definition"
+  },
+  "commands": {
+    "up": "Start the Moodle development environment",
+    "config": "Configure the development environment",
+    "copysrc": "Copy Moodle source from container to project",
+    "removesrc": "Remove Moodle source from project",
+    "listall": "List all available components",
+    "bash": "Execute bash commands in containers",
+    "phpunit": "Run PHPUnit tests",
+    "behat": "Run Behat tests",
+    "database": "Database management operations"
+  },
+  "models": {
+    "Recipe": "Main configuration model for Moodle environments",
+    "RecipePlugin": "Plugin configuration with repo, branch, and upstream support",
+    "Plugin": "Installed plugin information",
+    "PluginsInfo": "Collection of plugins and volumes",
+    "Volume": "Docker volume configuration",
+    "DockerContainer": "Container configuration",
+    "DockerData": "Docker environment data",
+    "GlobalConfig": "Global application configuration",
+    "InstanceConfig": "Instance-specific configuration"
+  },
+  "services": {
+    "Main": "Core application service and orchestration",
+    "Plugins": "Plugin management, cloning, and installation",
+    "Docker": "Docker container and compose management",
+    "Database": "Database operations and configuration",
+    "RecipeParser": "Recipe JSON parsing and validation",
+    "Configurator": "Environment configuration management",
+    "Dependencies": "Dependency validation and management",
+    "Project": "Project structure management",
+    "File": "File system operations"
+  },
+  "pluginSystem": {
+    "supportedFormats": [
+      "String URL: 'https://github.com/user/repo.git'",
+      "String with branch: 'https://github.com/user/repo.git~branch'",
+      "Object: {repo: 'url', branch: 'branch', upstream: 'upstream-url'}"
+    ],
+    "features": [
+      "Automatic branch validation",
+      "Upstream repository support",
+      "Plugin component detection",
+      "Moodle plugin path mapping",
+      "Volume mounting for development"
+    ]
+  },
+  "testing": {
+    "framework": "PHPUnit",
+    "testTypes": [
+      "Unit tests for services",
+      "Model validation tests",
+      "Plugin extraction tests",
+      "File operation tests"
+    ],
+    "coverage": "Focuses on core plugin management and model functionality"
+  },
+  "configuration": {
+    "recipeFormat": "JSON-based configuration files (.mrecipe.json)",
+    "globalConfig": "Stored in user's home directory",
+    "instanceConfig": "Project-specific .mchef directory",
+    "templates": "Twig templates for Docker and Moodle configuration generation"
+  },
+  "development": {
+    "requirements": [
+      "PHP 8.0+",
+      "Composer",
+      "Docker and Docker Compose",
+      "Git"
+    ],
+    "setup": [
+      "composer install",
+      "php bin/mchef.php --help"
+    ],
+    "testing": "vendor/bin/phpunit src/Tests/"
+  },
+  "dockerIntegration": {
+    "containers": [
+      "moodle: Main Moodle application container",
+      "database: PostgreSQL or MySQL database",
+      "behat: Behat testing environment (optional)"
+    ],
+    "volumes": "Plugin directories mounted for live development",
+    "networking": "Custom Docker networks for container communication"
+  },
+  "recent_changes": [
+    "Added RecipePlugin model with upstream repository support",
+    "Enhanced cloneGithubRepository method with branch validation",
+    "Implemented upstream remote addition with validation",
+    "Added comprehensive error handling and user feedback",
+    "Maintained backward compatibility with existing recipe formats"
+  ]
+}

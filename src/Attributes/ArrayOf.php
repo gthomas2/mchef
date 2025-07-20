@@ -16,10 +16,13 @@ class ArrayOf {
     public string|TYPE|array $types;
 
     public function __construct(string|TYPE...$types) {
+        $this->types = [];
         foreach ($types as $type) {
             if (!$type instanceof TYPE) {
-                if (!class_exists($type)) {
-                    throw new Error("Attribute error: Invalid type / the class $type does not exist");
+                // Allow scalar type names
+                $scalarTypes = ['string', 'int', 'integer', 'bool', 'boolean', 'float', 'double', 'array', 'object'];
+                if (!in_array($type, $scalarTypes) && !class_exists($type)) {
+                    throw new \Error("Attribute error: Invalid type / the class $type does not exist");
                 }
             }
             $this->types[] = $type;
@@ -32,7 +35,7 @@ class ArrayOf {
         }
         foreach ($values as $value) {
             $valueok = false;
-            foreach ($this->types as $type) {;
+            foreach ($this->types as $type) {
                 if ($type instanceof TYPE) {
                     $checktype = $type->value;
                     if (gettype($value) === $checktype) {
