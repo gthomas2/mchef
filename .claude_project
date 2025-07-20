@@ -146,5 +146,23 @@
     "Implemented upstream remote addition with validation",
     "Added comprehensive error handling and user feedback",
     "Maintained backward compatibility with existing recipe formats"
-  ]
+  ],
+  "development_workflow": {
+    "feature_discovery": {
+      "description": "When working on this project, always check the features/requirements directory for pending features to implement",
+      "location": "features/requirements/",
+      "format": "Markdown files describing features, requirements, and specifications"
+    },
+    "implementation_documentation": {
+      "description": "After implementing features, document the implementation details in the features/implementation directory",
+      "location": "features/implementation/",
+      "format": "Markdown files describing how features were implemented, design decisions, and usage examples"
+    },
+    "instructions_for_claude": [
+      "Always check features/requirements/ for pending work when asked about features or improvements",
+      "After implementing any feature, create or update documentation in features/implementation/",
+      "Reference requirement files when implementing features to ensure all criteria are met",
+      "Keep implementation documentation up-to-date with code changes"
+    ]
+  }
 }
