@@ -3,6 +3,7 @@
 namespace App\Command;
 
 use App\Service\Configurator;
+use App\Service\ProxyService;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Options;
@@ -62,6 +63,11 @@ class Up extends AbstractCommand {
         // Start the containers
         $this->cli->info("Starting containers for: $containerPrefix");
         $this->startContainers([$moodleContainer, $dbContainer]);
+        
+        // Handle proxy mode
+        $proxyService = ProxyService::instance($this->cli);
+        $proxyService->ensureProxyRunning();
+        
         $this->cli->success('Containers started successfully!');
     }
 

@@ -29,9 +29,9 @@ class Main extends AbstractService {
     private $pluginsService;
 
     /**
-     * @var PluginsInfo
+     * @var PluginsInfo|null
      */
-    private PluginsInfo $pluginInfo;
+    private ?PluginsInfo $pluginInfo = null;
 
     /**
      * @var \Twig\Environment
@@ -42,6 +42,8 @@ class Main extends AbstractService {
      * @var string|null $chefPath
      */
     private ?string $chefPath = null;
+
+    private DockerData $dockerData;
 
     protected function __construct() {
         $loader = new \Twig\Loader\FilesystemLoader(__DIR__.'/../../templates');
@@ -76,10 +78,35 @@ class Main extends AbstractService {
         return $this->getDockerPath().'/assets';
     }
 
+    public function getHostPort(?Recipe $recipe = null): int {
+        $recipe = $recipe ?? $this->recipe;
+        $configurator = Configurator::instance($this->cli);
+        $config = $configurator->getMainConfig();
+
+        if (!empty($config->useProxy)) {
+            return $this->establishDockerData()->proxyModePort;
+        }
+        if (!empty($recipe->port)) {
+            return $recipe->port;
+        }
+        return 80; // Default is 80 if not set in recipe and not in proxy mode.
+    }
+
     private function startDocker($ymlPath) {
         $ymlPath=OS::path($ymlPath);
         $this->cli->notice('Starting docker containers');
-        // @Todo - force-recreate and --build need to be flags that get passed in, not hard coded.
+
+        $this->establishDockerData();
+        $dockerData = clone $this->dockerData;
+
+        // Always set hostPort to the correct value (proxy or non-proxy)
+        $dockerData->hostPort = $this->getHostPort();
+
+        // Re-render the compose file with the correct hostPort
+        $dockerComposeFileContents = $this->twig->render('@docker/main.compose.yml.twig', (array) $dockerData);
+        file_put_contents($ymlPath, $dockerComposeFileContents);
+
+        // Compose the command
         $cmd = "docker compose -f \"$ymlPath\" up -d --force-recreate --build";
         $this->execPassthru($cmd, "Error starting docker containers - try pruning with 'docker builder prune' OR 'docker system prune' (note 'docker system prune' will destroy all non running container images)");
 
@@ -200,11 +227,11 @@ class Main extends AbstractService {
                 $this->cli->notice('DB already installed. Skipping installation');
             } else {
                 $this->cli->notice('Installing DB');
-                
+
                 // Get language from global config, default to 'en' if not set
                 $globalConfig = Configurator::instance($this->cli)->getMainConfig();
                 $lang = $globalConfig->lang ?? 'en';
-                
+
                 $installoptions =
                     '/var/www/html/moodle/admin/cli/install_database.php --lang=' . $lang . ' --adminpass=123456 --adminemail=admin@example.com --agree-license --fullname=mchef-MOODLE --shortname=mchefMOODLE';
                 $cmdinstall = 'docker exec ' . $moodleContainer . ' php ' . $installoptions;
@@ -235,14 +262,11 @@ class Main extends AbstractService {
             }
             $this->cli->notice('Moodle database installed successfully.');
         }
-
-        // Print out wwwroot
-        $this->cli->notice('Installation finished. Your mchef-Moodle is now available at: ' . $recipe->wwwRoot );
     }
 
     private function checkPortBinding(Recipe $recipe): bool {
       $dockerService = Docker::instance($this->cli);
-      return $dockerService->checkPortAvailable($recipe->port);
+      return $dockerService->checkPortAvailable($this->getHostPort($recipe));
     }
 
     public function hostPath() : string {
@@ -381,10 +405,29 @@ class Main extends AbstractService {
         return null;
     }
 
+    private function establishDockerData() {
+        if (!empty($this->dockerData)) {
+            return $this->dockerData;
+        }
+        $this->pluginInfo = (Plugins::instance($this->cli))->getPluginsInfoFromRecipe($this->recipe);
+        $volumes = $this->pluginInfo ? $this->pluginInfo->volumes : [];
+        if ($volumes) {
+            $this->cli->info('Volumes will be created for plugins: '.implode("\n", array_map(function($vol) {return $vol->path;}, $volumes)));
+        }
+
+        $dockerData = new DockerData($volumes, null, ...(array) $this->recipe);
+        $dockerData->volumes = $volumes;
+        $this->dockerData = $dockerData;
+        return $this->dockerData;
+    }
+
     public function up(string $recipeFilePath): void {
         $recipeFilePath = OS::path($recipeFilePath);
         $this->cli->notice('Cooking up recipe '.$recipeFilePath);
-        if (stripos(getcwd(), 'moodle-chef') !== false) {
+        // Check if we're running from within the actual moodle-chef development directory
+        $currentDir = realpath(getcwd());
+        $mchefDevDir = realpath(__DIR__ . '/../../');
+        if ($currentDir && $mchefDevDir && (strpos($currentDir . '/', $mchefDevDir . '/') === 0 || $currentDir === $mchefDevDir)) {
             throw new Exception('You should not run mchef from within the moodle-chef folder.'.
                 "\nYou should instead, create a link to mchef in your bin folder and then run it from a project folder.".
                 "\n\nphp mchef.php -i will do this for you. You'll need to open a fresh terminal once it has completed.".
@@ -406,7 +449,6 @@ class Main extends AbstractService {
            copy($recipeFilePath, $recipeJsonFilePath);
         }
         $this->stopContainers($recipe);
-        $this->checkPortBinding($recipe) || die();
 
         if ($recipe->includeBehat) {
             $behatDumpPath = getcwd().'/_behat_dump';
@@ -417,36 +459,59 @@ class Main extends AbstractService {
         }
 
         $this->pluginInfo = (Plugins::instance($this->cli))->getPluginsInfoFromRecipe($recipe);
-        $volumes = $this->pluginInfo ? $this->pluginInfo->volumes : null;
+        $volumes = $this->pluginInfo ? $this->pluginInfo->volumes : [];
         if ($volumes) {
             $this->cli->info('Volumes will be created for plugins: '.implode("\n", array_map(function($vol) {return $vol->path;}, $volumes)));
         }
 
         $dockerData = new DockerData($volumes, null, ...(array) $recipe);
         $dockerData->volumes = $volumes;
+        $this->dockerData = $dockerData;
 
         if ($recipe->updateHostHosts) {
             $this->updateHostHosts($recipe);
         }
+
+        // Register instance first to allocate proxy port if needed
+        $chefPath = $this->getChefPath();
+        $dockerPath = $this->getDockerPath();
+        if (!file_exists($dockerPath)) {
+            mkdir($dockerPath, 0755, true);
+        }
+        copy($recipeFilePath, $chefPath.'/recipe.json');
+        $regUuid = $this->getRegisteredUuid($chefPath);
+        $this->cli->notice('Registering instance in main config');
+
+        $configurator = Configurator::instance($this->cli);
+        $configurator->registerInstance(realPath($recipeFilePath), $regUuid, $recipe->containerPrefix);
+        // Now get the updated proxy information after registration
+        $globalConfig = $configurator->getMainConfig();
+        $useProxy = $globalConfig->useProxy ?? false;
+
+        // Get proxy port for this instance if in proxy mode
+        if ($useProxy) {
+            $instances = $configurator->getInstanceRegistry();
+            foreach ($instances as $instance) {
+                if ($instance->containerPrefix === $recipe->containerPrefix && $instance->proxyModePort !== null) {
+                    $dockerData->proxyModePort = $instance->proxyModePort;
+                    $this->cli->info("Allocated proxy port {$instance->proxyModePort} for {$recipe->containerPrefix}");
+                    break;
+                }
+            }
+            // In proxy mode, always use the allocated proxy port for the host mapping
+            $dockerData->hostPort = $dockerData->proxyModePort;
+        } else {
+            // In non-proxy mode, use the recipe port
+            $dockerData->hostPort = $recipe->port;
+        }
+
+        $this->checkPortBinding($recipe) || die();
 
         try {
             $dockerFileContents = $this->twig->render('@docker/main.dockerfile.twig', (array) $dockerData);
         } catch (\Exception $e) {
             throw new Exception('Failed to parse main.dockerfile template: '.$e->getMessage());
         }
-
-        // Copy docker files and recipe files over to .mchef hidden directory.
-        $chefPath = $this->getChefPath();
-        $dockerPath =$this->getDockerPath();
-        if (!file_exists($dockerPath)) {
-            mkdir($dockerPath, 0755, true);
-        }
-
-        copy($recipeFilePath, $chefPath.'/recipe.json');
-
-        $regUuid = $this->getRegisteredUuid($chefPath);
-        $this->cli->notice('Registering instance in main config');
-        Configurator::instance($this->cli)->registerInstance(realPath($recipeFilePath), $regUuid, $recipe->containerPrefix);
 
         $dockerData->dockerFile = $dockerPath.'/Dockerfile';
         file_put_contents($dockerData->dockerFile, $dockerFileContents);
@@ -462,6 +527,14 @@ class Main extends AbstractService {
         $this->startDocker($ymlPath);
 
         $this->configureDockerNetwork($recipe);
+
+        // Handle proxy mode
+        $proxyService = ProxyService::instance($this->cli);
+        $proxyService->ensureProxyRunning();
+        $proxyService->updateProxyConfiguration();
+
+        // Print out wwwroot
+        $this->cli->notice('Your mchef-Moodle is now available at: ' . $recipe->wwwRoot );
     }
 
     public function getRecipe(?string $recipeFilePath = null): Recipe {
@@ -477,7 +550,7 @@ class Main extends AbstractService {
         return $this->recipe;
     }
 
-    public function getPluginInfo(): PluginsInfo {
+    public function getPluginInfo(): ?PluginsInfo {
         return $this->pluginInfo;
     }
 

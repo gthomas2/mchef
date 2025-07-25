@@ -1,0 +1,11 @@
+{
+  "name": "Moodle 5.0",
+  "version": "1.0.0",
+  "containerPrefix": "m500",
+  "moodleTag": "MOODLE_500_STABLE",
+  "dbVersion": "14",
+  "phpVersion": "8.3",
+  "host": "moodle500.test",
+  "port": 80,
+  "updateHostHosts": true
+}

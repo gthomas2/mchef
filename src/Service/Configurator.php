@@ -48,18 +48,24 @@ class Configurator extends AbstractService {
     }
 
     private function serialzeRegistryInstance(RegistryInstance $instance) {
-        return "$instance->uuid|$instance->recipePath|$instance->containerPrefix";
+        $port = $instance->proxyModePort ?? '';
+        return "$instance->uuid|$instance->recipePath|$instance->containerPrefix|$port";
     }
 
     private function deserializeRegistryInstance(string $instanceRow): ?RegistryInstance {
         $tmparr = explode("|", $instanceRow);
-        if (count($tmparr) !== 3) {
-            // Unexpected - should always have 3 elements.
-            // first is uuid, second is instance file path, third is containerPrefix.
+        if (count($tmparr) < 3 || count($tmparr) > 4) {
+            // Support both old format (3 elements) and new format (4 elements)
             $this->cli->warning('Invalid instance in registry'. $instanceRow);
             return null;
         }
-        return new RegistryInstance($tmparr[0], $tmparr[1], $tmparr[2]);
+        
+        $proxyModePort = null;
+        if (count($tmparr) === 4 && !empty($tmparr[3])) {
+            $proxyModePort = (int)$tmparr[3];
+        }
+        
+        return new RegistryInstance($tmparr[0], $tmparr[1], $tmparr[2], $proxyModePort);
     }
 
     /**
@@ -102,6 +108,8 @@ class Configurator extends AbstractService {
     private function upsertRegistryInstance(string $uuid, string $instanceRecipePath, string $containerPrefix) {
         $path = OS::realPath($instanceRecipePath);
         $instances = $this->getInstanceRegistry();
+        $globalConfig = $this->getMainConfig();
+        
         if (empty($instances[$uuid])) {
             // Check that the recipe path is not registered under another uuid.
             $possibleDuplicates = count(array_filter($instances, fn($inst) => $inst->recipePath === $path || $inst->containerPrefix === $containerPrefix));
@@ -116,7 +124,13 @@ class Configurator extends AbstractService {
             }
         }
 
-        $instances[$uuid] = new RegistryInstance($uuid, $instanceRecipePath, $containerPrefix);
+        // Allocate proxy mode port if needed
+        $proxyModePort = null;
+        if ($globalConfig->useProxy) {
+            $proxyModePort = $this->allocateProxyPort($instances);
+        }
+
+        $instances[$uuid] = new RegistryInstance($uuid, $instanceRecipePath, $containerPrefix, $proxyModePort);
 
         $this->writeInstanceRegistry($instances);
     }
@@ -146,5 +160,30 @@ class Configurator extends AbstractService {
         $mainConfig = $this->getMainConfig();
         $mainConfig->$field = $value;
         $this->writeMainConfig($mainConfig);
+    }
+
+    /**
+     * Allocate the next available proxy port starting from 8100
+     * @param RegistryInstance[] $instances
+     * @return int
+     */
+    private function allocateProxyPort(array $instances): int {
+        $startPort = 8100;
+        $usedPorts = [];
+        
+        // Collect all currently used proxy ports
+        foreach ($instances as $instance) {
+            if ($instance->proxyModePort !== null) {
+                $usedPorts[] = $instance->proxyModePort;
+            }
+        }
+        
+        // Find the next available port
+        $port = $startPort;
+        while (in_array($port, $usedPorts)) {
+            $port++;
+        }
+        
+        return $port;
     }
 }
