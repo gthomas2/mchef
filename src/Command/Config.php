@@ -22,7 +22,7 @@ class Config extends AbstractCommand {
     const COMMAND_NAME = 'config';
 
     final public static function instance(MChefCLI $cli): Config {
-        $instance = self::setup_instance($cli);
+        $instance = self::setup_singleton($cli);
         return $instance;
     }
 
@@ -62,6 +62,8 @@ class Config extends AbstractCommand {
                 "(This will make all your containers accessible on port 80.)",
                 onYes: fn() => $this->setProxy(true),
                 onNo: fn() => $this->setProxy(false));
+        } else {
+            $this->cli->error('Invalid config option');
         }
     }
 

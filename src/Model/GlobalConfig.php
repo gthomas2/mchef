@@ -16,5 +16,11 @@ class GlobalConfig extends AbstractModel {
          * @var string
          */
         public ?string $lang = 'en',
+
+        /**
+         * The name of the default instance you are currently using or null / empty for none selected
+         * @var string|null
+         */
+        public ?string $instance = null
     ) {}
 }

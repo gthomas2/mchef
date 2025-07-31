@@ -4,7 +4,7 @@ namespace App\Service;
 
 class PHPVersions extends AbstractService {
     final public static function instance(): PHPVersions {
-        return self::setup_instance();
+        return self::setup_singleton();
     }
 
     public function listVersions(): array {

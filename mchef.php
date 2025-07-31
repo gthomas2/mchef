@@ -1,6 +1,6 @@
 <?php
 
-error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
+error_reporting(E_ALL & ~E_DEPRECATED);
 
 $vendor_path = __DIR__.'/vendor/autoload.php';
 if (stripos(__FILE__, 'bin'.DIRECTORY_SEPARATOR)) {
@@ -34,6 +34,11 @@ class MChefCLI extends CLI {
      */
     public $dockerService;
 
+    /**
+     * @var bool $verbose - verbose mode
+     */
+    public bool $verbose = false;
+
     private function registerCommands(Options $options) {
         if (strpos(__FILE__, OS::path('bin/mchef.php')) !== false) {
             $files = scandir(OS::path(__DIR__.'/../src/Command'));
@@ -65,10 +70,16 @@ class MChefCLI extends CLI {
         $options->registerOption('version', 'Print version', 'v');
     }
 
+    private function welcomeLine() {
+        $welcomeLine = 'Mchef: '.self::$version;
+        $this->info($welcomeLine);
+    }
+
     protected function main(Options $options) {
         $this->main = \App\Service\Main::instance($this);
 
         if ($cmd = $options->getCmd()) {
+            $this->welcomeLine();
             $class = 'App\\Command\\'.ucfirst($cmd);
             if (!class_exists($class)) {
                 $cli = \App\Service\CliService::instance();
@@ -83,9 +94,14 @@ class MChefCLI extends CLI {
 
         if ($args = $options->getArgs()) {
             $recipe = $args[0];
+            // Important - if we are upping a new recipe then we should unset the currently selected instance.
+            \App\Service\Configurator::instance()->setMainConfigField('instance', null);
             $this->main->up($recipe);
             return;
         }
+
+        $this->welcomeLine();
+
         if ($options->getOpt('installexec')) {
             $this->info('Installing to bin folder');
             \App\Service\InstallToBin::instance($this)->install();
@@ -126,6 +142,13 @@ class MChefCLI extends CLI {
         }
 
         return $onNo ? $onNo($input) : false;
+    }
+
+    public function debug($message, array $context = array()) {
+        if (!$this->verbose) {
+            return;
+        }
+        $this->log('debug', $message, $context);
     }
 
 }

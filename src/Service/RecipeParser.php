@@ -8,7 +8,7 @@ use App\Model\Recipe;
 
 class RecipeParser extends AbstractService {
     final public static function instance(): RecipeParser {
-        return self::setup_instance();
+        return self::setup_singleton();
     }
 
     public function parse(string $filePath): Recipe {

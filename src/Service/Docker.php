@@ -12,7 +12,7 @@ class Docker extends AbstractService {
     use ExecTrait;
 
     final public static function instance(?MChefCLI $cli = null): Docker {
-        return self::setup_instance($cli);
+        return self::setup_singleton($cli);
     }
 
     private function getTableHeadingPositions(string $table, array $headings): array {

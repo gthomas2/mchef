@@ -27,5 +27,11 @@ class RegistryInstance extends AbstractModel {
          */
         public ?int $proxyModePort = null,
 
+        /**
+         * Is this instance currently configured as a default instance?
+         * @var bool|null
+         */
+        public ?bool $isDefault = false
+
     ) {}
 }

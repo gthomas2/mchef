@@ -23,7 +23,7 @@ class ListAll extends AbstractCommand {
     const COMMAND_NAME = 'list';
 
     final public static function instance(MChefCLI $cli): ListAll {
-        $instance = self::setup_instance($cli);
+        $instance = self::setup_singleton($cli);
         return $instance;
     }
 
@@ -32,14 +32,15 @@ class ListAll extends AbstractCommand {
         $recipeParser = RecipeParser::instance();
         $main = Main::instance($this->cli);
         $docker = Docker::instance($this->cli);
-        $this->cli->info('Listing registered mchef instances...');
+        $config = Configurator::instance($this->cli)->getMainConfig();
+        $selectedInstance = $config->instance ?? null;
         foreach ($instances as $instance) {
             if (!file_exists($instance->recipePath)) {
                 $this->cli->warning('⚠️ Recipe missing '.$instance->recipePath);
             }
 
             $recipe = $recipeParser->parse($instance->recipePath);
-            $moodleContainerName = $main->getDockerMoodleContainerName($recipe);
+            $moodleContainerName = $main->getDockerMoodleContainerName(null, $recipe);
 
             try {
                 $running = $docker->checkContainerRunning($moodleContainerName);
@@ -48,8 +49,9 @@ class ListAll extends AbstractCommand {
             }
 
             $symbol = $running ? '✅' : '⏸️ '; // Not sure why but we need an extra space after pause!
-            echo($symbol.' '.$instance->containerPrefix.' - '.($running ? 'up' : 'inactive'))."\n";
-
+            $selectedMark = ($selectedInstance && $instance->containerPrefix === $selectedInstance)
+                ? " \033[32m*SELECTED*\033[0m" : '';
+            echo($symbol.' '.$instance->containerPrefix.' - '.($running ? 'up' : 'inactive').$selectedMark."\n");
         }
     }
 

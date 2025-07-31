@@ -7,6 +7,7 @@ use App\Model\Plugin;
 use App\Service\Docker;
 use App\Service\Main;
 use App\Service\Plugins;
+use App\StaticVars;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Exception;
@@ -21,30 +22,23 @@ class PurgeCaches extends AbstractCommand {
     const COMMAND_NAME = 'purgecaches';
 
     final public static function instance(MChefCLI $cli): PurgeCaches {
-        $instance = self::setup_instance($cli);
+        $instance = self::setup_singleton($cli);
         return $instance;
     }
 
     public function execute(Options $options): void {
+        $this->setStaticVarsFromOptions($options);
+        $instanceName = StaticVars::$instance->containerPrefix;
         $mainService = Main::instance($this->cli);
-        $instance = $options->getOpt('instance');
 
-        if ($instance) {
-            $containerPrefix = $instance;
-        } else{
-            $recipe = $mainService->getRecipe();
-            $containerPrefix = $recipe->containerPrefix;
-        }
-
-        $containerName = $containerPrefix . '-moodle';
+        $containerName = $mainService->getDockerMoodleContainerName($instanceName);
         $cmd = 'docker exec -it '.$containerName.' php /var/www/html/moodle/admin/cli/purge_caches.php';
-        $this->execPassthru($cmd);
+        $this->exec($cmd, 'Failed to purge caches for '.$instanceName);
+        $this->cli->success('Caches successfully purged for '.$instanceName);
     }
 
     public function register(Options $options): void {
         $options->registerCommand(self::COMMAND_NAME, 'Purge moodle caches');
-        $options->registerOption('instance',
-            'Mchef instance name (container prefix)',
-            'i', 'instance', self::COMMAND_NAME);
+        $options->registerArgument('prefix', 'Mchef instance name to purge caches (optional if run from project directory)', false, self::COMMAND_NAME);
     }
 }

@@ -11,7 +11,7 @@ class File extends AbstractService {
     use ExecTrait;
 
     final public static function instance(): File {
-        return self::setup_instance();
+        return self::setup_singleton();
     }
 
     /**

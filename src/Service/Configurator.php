@@ -13,7 +13,7 @@ class Configurator extends AbstractService {
     }
 
     final public static function instance(?CLI $cli = null): Configurator {
-        return self::setup_instance($cli);
+        return self::setup_singleton($cli);
     }
 
     private function initializeConfig(): void {
@@ -59,12 +59,12 @@ class Configurator extends AbstractService {
             $this->cli->warning('Invalid instance in registry'. $instanceRow);
             return null;
         }
-        
+
         $proxyModePort = null;
         if (count($tmparr) === 4 && !empty($tmparr[3])) {
             $proxyModePort = (int)$tmparr[3];
         }
-        
+
         return new RegistryInstance($tmparr[0], $tmparr[1], $tmparr[2], $proxyModePort);
     }
 
@@ -91,6 +91,20 @@ class Configurator extends AbstractService {
         return $instances;
     }
 
+    public function getRegisteredInstance(string $instanceName): ?RegistryInstance {
+        $instances = $this->getInstanceRegistry();
+        $default = Configurator::instance()->getMainConfig()->instance;
+        foreach ($instances as $instance) {
+            if ($instance->containerPrefix === $instanceName) {
+                if ($instance->containerPrefix === $default) {
+                    $instance->isDefault = true;
+                }
+                return $instance;
+            }
+        }
+        return null;
+    }
+
     /**
      * @param RegistryInstance[] $instances
      * @return void
@@ -109,7 +123,7 @@ class Configurator extends AbstractService {
         $path = OS::realPath($instanceRecipePath);
         $instances = $this->getInstanceRegistry();
         $globalConfig = $this->getMainConfig();
-        
+
         if (empty($instances[$uuid])) {
             // Check that the recipe path is not registered under another uuid.
             $possibleDuplicates = count(array_filter($instances, fn($inst) => $inst->recipePath === $path || $inst->containerPrefix === $containerPrefix));
@@ -170,20 +184,20 @@ class Configurator extends AbstractService {
     private function allocateProxyPort(array $instances): int {
         $startPort = 8100;
         $usedPorts = [];
-        
+
         // Collect all currently used proxy ports
         foreach ($instances as $instance) {
             if ($instance->proxyModePort !== null) {
                 $usedPorts[] = $instance->proxyModePort;
             }
         }
-        
+
         // Find the next available port
         $port = $startPort;
         while (in_array($port, $usedPorts)) {
             $port++;
         }
-        
+
         return $port;
     }
 }

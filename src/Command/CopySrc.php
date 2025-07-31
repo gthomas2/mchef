@@ -3,13 +3,17 @@
 namespace App\Command;
 
 use App\Model\Recipe;
+use App\Model\RegistryInstance;
+use App\Service\Configurator;
 use App\Service\Docker;
 use App\Service\File;
 use App\Service\Main;
 use App\Service\Plugins;
 use App\Service\Project;
+use App\StaticVars;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
+use splitbrain\phpcli\Exception;
 use splitbrain\phpcli\Options;
 use MChefCLI;
 
@@ -25,13 +29,14 @@ class CopySrc extends AbstractCommand {
     protected Docker $dockerService;
 
     final public static function instance(MChefCLI $cli): CopySrc {
-        $instance = self::setup_instance($cli);
+        $instance = self::setup_singleton($cli);
         return $instance;
     }
 
-    private function copySrc(): void {
+    private function copySrc(RegistryInstance $instance): void {
         $mainService = Main::instance($this->cli);
-        $this->recipe = $mainService->getRecipe();
+        $projectDir = dirname($instance->recipePath);
+        $this->recipe = $mainService->getRecipe($instance->recipePath);
         $moodleContainer = $mainService->getDockerMoodleContainerName();
 
         // Create temp directory on guest moodle container.
@@ -58,22 +63,33 @@ class CopySrc extends AbstractCommand {
         $this->exec($cmd);
 
         $this->cli->notice('Copying moodle source to project directory');
-        $exec = 'docker cp '.$moodleContainer.':'.$tmpDir.'/moodle/. '.getcwd();
+        $exec = 'docker cp '.$moodleContainer.':'.$tmpDir.'/moodle/. '.$projectDir;
         $this->execPassthru($exec);
 
         // Remove temp directory on guest moodle container.
         $cmd = 'rm -rf '.$tmpDir;
         $this->exec('docker exec '.$moodleContainer.' '.$cmd);
 
-        if (file_exists(getcwd().'/lib/weblib.php')) {
+        if (file_exists($projectDir.'/lib/weblib.php')) {
             $this->cli->success('Finished copying moodle source to project directory');
         }
     }
 
     public function execute(Options $options): void {
-        Project::instance($this->cli)->purgeProjectFolderOfNonPluginCode();
+        $this->cli->promptYesNo(
+            "Copying the moodle src into your project directory will wipe everything except your plugin files. Continue?",
+            null,
+            function() {
+                die;
+            });
 
-        $git = getcwd().'/.git';
+        $this->setStaticVarsFromOptions($options);
+        $instance = StaticVars::$instance;
+        $instanceName = $instance->containerPrefix;
+        Project::instance($this->cli)->purgeProjectFolderOfNonPluginCode($instanceName);
+        $projectDir = dirname($instance->recipePath);
+
+        $git = $projectDir.'/.git';
         if (file_exists($git)) {
             // TODO - implement.
             $this->cli->promptYesNo("Your project folder seems to be a git project.\n".
@@ -82,7 +98,7 @@ class CopySrc extends AbstractCommand {
             );
         }
 
-        $this->copySrc();
+        $this->copySrc($instance);
     }
 
     public function register(Options $options): void {

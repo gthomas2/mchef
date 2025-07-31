@@ -6,7 +6,7 @@ use App\Helpers\OS;
 class CliService extends AbstractService {
 
     final public static function instance(): CliService {
-        return self::setup_instance();
+        return self::setup_singleton();
     }
 
     public function locateCommandClass(string $command): ?string {

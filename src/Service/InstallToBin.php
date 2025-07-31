@@ -11,7 +11,7 @@ class InstallToBin extends AbstractService {
     use ExecTrait;
 
     final public static function instance(CLI $cli): InstallToBin {
-        return self::setup_instance($cli);
+        return self::setup_singleton($cli);
     }
 
     protected function get_php_executable_path() {

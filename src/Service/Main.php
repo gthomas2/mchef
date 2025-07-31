@@ -2,10 +2,13 @@
 
 namespace App\Service;
 
+use App\Command\Config;
 use App\Helpers\OS;
 use App\Model\DockerData;
 use App\Model\PluginsInfo;
 use App\Model\Recipe;
+use App\Model\RegistryInstance;
+use App\StaticVars;
 use App\Traits\ExecTrait;
 use splitbrain\phpcli\CLI;
 use splitbrain\phpcli\Exception;
@@ -54,20 +57,49 @@ class Main extends AbstractService {
     }
 
     final public static function instance(?CLI $cli): Main {
-        return self::setup_instance($cli);
+        return self::setup_singleton($cli);
     }
 
     public function getChefPath($failOnNotFound = false): ?string {
         if ($this->chefPath) {
             return $this->chefPath;
         }
-        $chefPath =  File::instance()->findFileInOrAboveDir('.mchef');
+
+        $configurator = Configurator::instance($this->cli);
+        $instanceName = $configurator->getMainConfig()->instance;
+        if ($instanceName) {
+            $instance = $configurator->getRegisteredInstance($instanceName);
+            $chefPath = OS::path(dirname($instance->recipePath).'/.mchef');
+        } else {
+            $chefPath = File::instance()->findFileInOrAboveDir('.mchef');
+        }
         if ($failOnNotFound && !is_dir($chefPath)) {
             $this->cli->alert('Your current working directory, or the directories above it, do not contain a .mchef directory');
             die;
         }
         $this->chefPath = $chefPath;
         return $this->chefPath;
+    }
+
+    public function resolveActiveInstanceName(): ?string {
+        $config = Configurator::instance()->getMainConfig();
+        if (!empty($config->instance)) {
+            return $config->instance;
+        }
+        $chefPath = $this->getChefPath(false);
+        if ($chefPath) {
+            // We are in a project dir.
+            $recipe = $this->getRecipe();
+            if (!empty($recipe->containerPrefix)) {
+                return $recipe->containerPrefix;
+            }
+        }
+        return null;
+    }
+
+    public function resolveActiveInstance(?string $instanceName): ?RegistryInstance {
+        $instanceName = $instanceName ?? $this->resolveActiveInstanceName();
+        return Configurator::instance()->getRegisteredInstance($instanceName);
     }
 
     public function getDockerPath() {
@@ -128,12 +160,17 @@ class Main extends AbstractService {
         $this->cli->success('All containers have been started');
     }
 
-    public function stopContainers(?Recipe $recipe = null): void {
+    public function stopContainers(?string $instanceName = null): void {
+        $instanceName = $instanceName ?? $this->resolveActiveInstanceName();
+        if (!$instanceName) {
+            $this->cli->error('No active instance to stop');
+            return;
+        }
         $this->cli->notice('Stopping containers');
-        $recipe = $recipe ?? $this->getRecipe();
-        $moodleContainer = $this->getDockerMoodleContainerName();
-        $dbContainer = $this->getDockerDatabaseContainerName();
-        $behatContainer = $recipe->containerPrefix.'-behat';
+
+        $moodleContainer = $this->getDockerMoodleContainerName($instanceName);
+        $dbContainer = $this->getDockerDatabaseContainerName($instanceName);
+
         $toStop = [
             $moodleContainer,
             $dbContainer
@@ -145,7 +182,7 @@ class Main extends AbstractService {
         foreach ($containers as $container) {
             $name = $container->names;
             $this->cli->notice('Stopping container: '.$name);
-            if (in_array($name, $toStop) || strpos($behatContainer, $name) === 0) {
+            if (in_array($name, $toStop)) {
                 $dockerService->stopDockerContainer($name);
                 $stoppedContainers++;
             }
@@ -448,7 +485,7 @@ class Main extends AbstractService {
            // If the file doesn't exist, copy the contents of $recipeFilePath to the new recipe.json file
            copy($recipeFilePath, $recipeJsonFilePath);
         }
-        $this->stopContainers($recipe);
+        $this->stopContainers($recipe->containerPrefix);
 
         if ($recipe->includeBehat) {
             $behatDumpPath = getcwd().'/_behat_dump';
@@ -544,10 +581,21 @@ class Main extends AbstractService {
         $mchefPath = $this->getChefPath();
         $recipeFilePath = $recipeFilePath ?? $mchefPath.'/recipe.json';
         if (!file_exists($recipeFilePath)) {
-            $this->cli->error('Have you run mchef.php [recipefile]? Recipe not present at '.$recipeFilePath);
+            throw new \Exception('Have you run mchef.php [recipefile]? Recipe not present at '.$recipeFilePath);
         }
         $this->recipe = $this->parseRecipe($recipeFilePath);
+        StaticVars::$recipe = $this->recipe;
         return $this->recipe;
+    }
+
+    public function getActiveInstanceRecipe(): Recipe {
+        $instanceName = $this->resolveActiveInstanceName();
+        $config = Configurator::instance($this->cli);
+        $instance = $config->getRegisteredInstance($instanceName);
+        if (!$instance) {
+            throw new \Exception('Failed to get instance '.$instanceName);
+        }
+        return $this->getRecipe($instance->recipePath);
     }
 
     public function getPluginInfo(): ?PluginsInfo {
@@ -558,20 +606,26 @@ class Main extends AbstractService {
         return $this->pluginsService;
     }
 
-    private function getDockerContainerName(string $suffix, ?Recipe $recipe = null, ?string $recipeFilePath = null) {
-        $recipe = $recipe ?? $this->recipe;
-        if (empty($recipe)) {
-            $this->getRecipe($recipeFilePath);
-            $recipe = $this->recipe;
+    private function getDockerContainerName(string $suffix, ?string $instanceName = null, ?Recipe $recipe = null, ?string $recipeFilePath = null) {
+        if (!$instanceName) {
+            $recipe = $recipe ?? $this->recipe;
+            if (empty($recipe)) {
+                $this->getRecipe($recipeFilePath);
+                $recipe = $this->recipe;
+            }
+            if (empty($recipe->containerPrefix)) {
+                throw new \Exception('Failed to establish instance name');
+            }
         }
-        return $recipe->containerPrefix.'-'.$suffix;
+        $instanceName = $instanceName ?? $recipe->containerPrefix;
+        return $instanceName.'-'.$suffix;
     }
 
-    public function getDockerMoodleContainerName(?Recipe $recipe = null) {
-        return $this->getDockerContainerName('moodle', $recipe);
+    public function getDockerMoodleContainerName(?string $instanceName = null, ?Recipe $recipe = null) {
+        return $this->getDockerContainerName('moodle', $instanceName, $recipe);
     }
 
-    public function getDockerDatabaseContainerName(?Recipe $recipe = null) {
-        return $this->getDockerContainerName('db', $recipe);
+    public function getDockerDatabaseContainerName(?string $instanceName = null, ?Recipe $recipe = null) {
+        return $this->getDockerContainerName('db', $instanceName, $recipe);
     }
 }

@@ -3,12 +3,13 @@
 namespace App\Command;
 
 use App\Exceptions\ExecFailed;
+use App\Model\Recipe;
+use App\Model\RegistryInstance;
 use App\Service\Docker;
 use App\Service\Main;
+use App\StaticVars;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
-use App\Traits\WithRecipe;
-use splitbrain\phpcli\Exception;
 use splitbrain\phpcli\Options;
 use MChefCLI;
 
@@ -16,29 +17,30 @@ class Database extends AbstractCommand {
 
     use SingletonTrait;
     use ExecTrait;
-    use WithRecipe;
+
+    protected RegistryInstance $instance;
+    protected Recipe $recipe;
 
     const COMMAND_NAME = 'database';
 
     final public static function instance(MChefCLI $cli): Database {
-        $instance = self::setup_instance($cli);
+        $instance = self::setup_singleton($cli);
         return $instance;
     }
 
     public function getDbName(): string {
-        $recipe = $this->getParsedRecipe();
-        return ($recipe->containerPrefix ?? 'mc').'-moodle';
+        return ($this->recipe->containerPrefix ?? 'mc').'-moodle';
     }
 
-    private function exec_database() {
+    private function execDatabase() {
         $this->cli->notice('TODO: Exec onto database...');
     }
 
-    private function wipe_postgres_database() {
+    private function wipePostgresDatabase() {
         $mainService = Main::instance($this->cli);
         $dbContainer = $mainService->getDockerDatabaseContainerName();
         $dockerService = Docker::instance($this->cli);
-        $recipe = $this->getParsedRecipe();
+        $recipe = $this->recipe;
         $dockerService->execute($dbContainer, "sh -c \"export PGPASSWORD=$recipe->dbPassword\"");
         $dbName = $this->getDbName();
         try {
@@ -66,20 +68,19 @@ class Database extends AbstractCommand {
         }
     }
 
-    private function wipe_mysql_database() {
+    private function wipeMysqlDatabase() {
         throw new \Exception('TODO!');
     }
 
-    private function wipe_database() {
+    private function wipeDatabase() {
         $this->cli->promptYesNo("ADVICE: TAKE A BACKUP FIRST!\n".
             "Are you sure you want to wipe your db?",
             function() {
-                $recipe = $this->getParsedRecipe();
                 try {
-                    if ($recipe->dbType === 'pgsql') {
-                        $this->wipe_postgres_database();
-                    } else if ($recipe->dbType === 'mysql') {
-                        $this->wipe_mysql_database();
+                    if ($this->recipe->dbType === 'pgsql') {
+                        $this->wipePostgresDatabase();
+                    } else if ($this->recipe->dbType === 'mysql') {
+                        $this->wipeMysqlDatabase();
                     } else {
                         throw new \Exception('Invalid database type ' . $recipe->dbType);
                     }
@@ -92,21 +93,24 @@ class Database extends AbstractCommand {
     }
 
     private function info() {
-        $mainService = Main::instance($this->cli);
-        $recipe = $mainService->getRecipe();
-        $dbName = ($recipe->containerPrefix ?? 'mc').'-moodle';
-        $dbContainer = ($recipe->containerPrefix ?? 'mc').'-db';
-        $localPortInfo = $recipe->dbHostPort ? " Local port = $recipe->dbHostPort " : '';
-        $this->cli->info("Container = $dbContainer{$localPortInfo}Database = $dbName User $recipe->dbUser Password $recipe->dbPassword");
+        $dbName = ($this->recipe->containerPrefix ?? 'mc').'-moodle';
+        $dbContainer = ($this->recipe->containerPrefix ?? 'mc').'-db';
+        $localPortInfo = $this->recipe->dbHostPort ? " Local port = $this->recipe->dbHostPort " : '';
+        $this->cli->info("Container = $dbContainer{$localPortInfo}Database = $dbName User {$this->recipe->dbUser} Password {$this->recipe->dbPassword}");
     }
 
     public function execute(Options $options): void {
+        $this->setStaticVarsFromOptions($options);
+        $this->instance = StaticVars::$instance;
+        $mainService = Main::instance($this->cli);
+        $this->recipe = $mainService->getRecipe($this->instance->recipePath);
+
         if (!empty($options->getOpt('wipe'))) {
-            $this->wipe_database();
+            $this->wipeDatabase();
             return;
         }
         if (!empty($options->getOpt('exec'))) {
-            $this->exec_database();
+            $this->execDatabase();
             return;
         }
         if (!empty($options->getOpt('info'))) {

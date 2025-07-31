@@ -4,20 +4,20 @@ namespace App\Traits;
 
 use App\Model\Recipe;
 use App\Service\Main;
+use App\StaticVars;
 
 trait WithRecipe {
-    public function getParsedRecipe(): Recipe {
-        static $recipe = null;
 
-        if ($recipe !== null) {
-            return $recipe;
+    public function getParsedRecipe(?string $instanceName = null): Recipe {
+        if (StaticVars::$recipe !== null) {
+            return StaticVars::$recipe;
         }
 
-        static $mainService = null;
-        if (!$mainService) {
-            $mainService = Main::instance($this->cli);
-        }
+        $mainService = Main::instance($this->cli);
+        $instance = $mainService->resolveActiveInstance($instanceName);
 
-        return $mainService->getRecipe();
+        StaticVars::$recipe = $mainService->getRecipe($instance->recipePath ?? null);
+
+        return StaticVars::$recipe;
     }
 }

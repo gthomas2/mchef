@@ -20,7 +20,7 @@ trait SingletonTrait {
         $this->cli = $cli;
     }
 
-    protected static function setup_instance(MChefCLI|MockObject|null $cli = null): SingletonInterface {
+    protected static function setup_singleton(MChefCLI|MockObject|null $cli = null): SingletonInterface {
         static $instances = [];
         $class = get_called_class();
         if (!empty($instances[$class])) {
