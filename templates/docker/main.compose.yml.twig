@@ -26,7 +26,7 @@ services:
       DB_TYPE: {{ dbType ?? 'pgsql' }}
       DB_HOST: *db-container-name
     ports:
-      - {{port}}:{{port}}
+      - {{hostPort}}:{{port}}
     extra_hosts:
       - "{{host}}:127.0.0.1"
 {% if (behatHost) %}

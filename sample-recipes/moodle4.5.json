@@ -1,0 +1,11 @@
+{
+  "name": "Moodle 4.5",
+  "version": "1.0.0",
+  "containerPrefix": "m405",
+  "moodleTag": "MOODLE_405_STABLE",
+  "dbVersion": "14",
+  "phpVersion": "8.2",
+  "host": "moodle405.test",
+  "port": 80,
+  "updateHostHosts": true
+}

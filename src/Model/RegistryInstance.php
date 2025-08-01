@@ -22,5 +22,10 @@ class RegistryInstance extends AbstractModel {
          */
         public string $containerPrefix,
 
+        /**
+         * @var int|null - proxy mode port allocation (8100+)
+         */
+        public ?int $proxyModePort = null,
+
     ) {}
 }

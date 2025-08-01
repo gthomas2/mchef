@@ -22,10 +22,32 @@ class PHPVersions extends AbstractService {
         curl_setopt($ch, CURLOPT_HTTPHEADER, array(
             'User-Agent: PHP'
         ));
-        $response = curl_exec($ch);
+
+        $hardCodedVersions = [
+            '5.6',
+            '7.0',
+            '7.1',
+            '7.2',
+            '7.3',
+            '7.4',
+            '8.0',
+            '8.1',
+            '8.2',
+            '8.3',
+            '8.4'
+        ];
+
+        try {
+            $response = curl_exec($ch);
+        } catch (\Exception $e) {
+            return $hardCodedVersions;
+        }
 
         // Parse the JSON response into a PHP array
         $branches = json_decode($response, true);
+        if (empty($branches)) {
+            return $hardCodedVersions;
+        }
 
         // Loop through the branches and extract the PHP version from the branch name
         $phpVersions = [];

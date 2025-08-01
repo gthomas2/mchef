@@ -49,7 +49,7 @@ class Config extends AbstractCommand {
     }
 
     private function setProxy(bool $proxy) {
-        Configurator::instance($this->cli)->setMainConfigField('proxy', $proxy);
+        Configurator::instance($this->cli)->setMainConfigField('useProxy', $proxy);
         $this->cli->notice("Local reverse proxy settings changed.\n".
             "NOTE: You will need to stop all your mchef instances and re-up them to use the new settings");
     }

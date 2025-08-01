@@ -11,4 +11,9 @@ class DockerData extends Recipe {
     ) {
         parent::__construct(...self::cleanConstructArgs($args));
     }
+
+    /**
+     * @var int|null - proxy mode port for this instance
+     */
+    public ?int $proxyModePort = null;
 }

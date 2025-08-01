@@ -147,8 +147,8 @@ class Behat extends AbstractCommand {
             $runMsg .= " for tags ".$tags;
         }
 
-        $this->cli->alert('Profile '.$options->getOpt('profile'));
         $profile = $options->getOpt('profile') ? $options->getOpt('profile') : 'headlesschrome' ;
+        $this->cli->info('Profile '.$profile);
 
         $behatRunCode .= ' --profile="'.$profile.'"';
         if ($this->verbose) {
