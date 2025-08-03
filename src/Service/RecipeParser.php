@@ -23,6 +23,14 @@ class RecipeParser extends AbstractService {
             throw new Exception('Failed to decode recipe JSON. Recipe: '.$filePath, 0, $e);
         }
 
+        // If adminPassword is not set in recipe, use global config value if available
+        if (empty($recipe->adminPassword)) {
+            $globalConfig = \App\Service\Configurator::instance()->getMainConfig();
+            if (!empty($globalConfig->adminPassword)) {
+                $recipe->adminPassword = $globalConfig->adminPassword;
+            }
+        }
+
         // Validate required properties
         $this->validateRecipe($recipe, $filePath);
 

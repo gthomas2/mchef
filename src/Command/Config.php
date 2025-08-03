@@ -46,6 +46,12 @@ class Config extends AbstractCommand {
     private function setLang(string $langCode) {
         $this->validateLang($langCode);
         Configurator::instance($this->cli)->setMainConfigField('lang', $langCode);
+        $this->cli->notice("Default language code has been set. Note - will only affect new installs");
+    }
+
+    private function setPassword(string $password) {
+        Configurator::instance($this->cli)->setMainConfigField('adminPassword', $password);
+        $this->cli->notice("Default admin password has been set. Note - will only affect new installs");
     }
 
     private function setProxy(bool $proxy) {
@@ -62,6 +68,9 @@ class Config extends AbstractCommand {
                 "(This will make all your containers accessible on port 80.)",
                 onYes: fn() => $this->setProxy(true),
                 onNo: fn() => $this->setProxy(false));
+        } else if (!empty($options->getOpt('password'))) {
+            $password = $this->cli->promptInput('Please enter a password: ');
+            $this->setPassword($password);
         } else {
             $this->cli->error('Invalid config option');
         }
@@ -70,6 +79,7 @@ class Config extends AbstractCommand {
     public function register(Options $options): void {
         $options->registerCommand(self::COMMAND_NAME, 'Configure mchef globally');
         $options->registerOption('lang', 'Set a default language code', 'l', true, self::COMMAND_NAME);
+        $options->registerOption('password', 'Set a default admin password', 'a', false, self::COMMAND_NAME);
         $options->registerOption('proxy', 'Proxy all sites so that they run on 80', 'p', false, self::COMMAND_NAME);
     }
 }

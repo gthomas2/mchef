@@ -168,6 +168,11 @@ class Recipe extends AbstractModel {
          */
         public ?string $behatHost = null,
 
+        /**
+         * @var string|null - default admin password
+         */
+        public ?string $adminPassword = null,
+
         // The following properties are set automatically on parse.
 
         public ?string $wwwRoot = null,

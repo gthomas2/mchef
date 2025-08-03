@@ -265,12 +265,15 @@ class Main extends AbstractService {
             } else {
                 $this->cli->notice('Installing DB');
 
-                // Get language from global config, default to 'en' if not set
+                // Get language and admin password
                 $globalConfig = Configurator::instance($this->cli)->getMainConfig();
                 $lang = $globalConfig->lang ?? 'en';
+                $adminPasswordRaw = $recipe->adminPassword ?? $globalConfig->adminPassword ?? '123456';
+                // Bash-safe escaping: wrap in single quotes and escape any single quotes inside
+                $adminPassword = "'" . str_replace("'", "'\\''", $adminPasswordRaw) . "'";
 
                 $installoptions =
-                    '/var/www/html/moodle/admin/cli/install_database.php --lang=' . $lang . ' --adminpass=123456 --adminemail=admin@example.com --agree-license --fullname=mchef-MOODLE --shortname=mchefMOODLE';
+                    '/var/www/html/moodle/admin/cli/install_database.php --lang=' . $lang . ' --adminpass=' . $adminPassword . ' --adminemail=admin@example.com --agree-license --fullname=mchef-MOODLE --shortname=mchefMOODLE';
                 $cmdinstall = 'docker exec ' . $moodleContainer . ' php ' . $installoptions;
 
                 // Try to install

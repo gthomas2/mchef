@@ -128,6 +128,21 @@ class MChefCLI extends CLI {
         return $onNo ? $onNo($input) : false;
     }
 
+    /**
+     * Reads user input from the command line and returns it.
+     * Optionally displays a prompt message.
+     * @param string $prompt
+     * @return string
+     */
+    public function promptInput(string $prompt = ''): string {
+        if ($prompt) {
+            $input = readline($prompt);
+        } else {
+            $input = readline();
+        }
+        return $input === false ? '' : trim($input);
+    }
+
     public function debug($message, array $context = array()) {
         if (!$this->verbose) {
             return;
