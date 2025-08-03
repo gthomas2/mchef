@@ -2,16 +2,15 @@
 
 namespace App\Service;
 use App\Helpers\OS;
+use App\MChefCLI;
 use App\Traits\ExecTrait;
-use splitbrain\phpcli\CLI;
-use splitbrain\phpcli\Exception;
 
 class Dependencies extends AbstractService {
 
     use ExecTrait;
     private $pluginsService;
 
-    final public static function instance(?CLI $cli = null): Dependencies {
+    final public static function instance(?MChefCLI $cli = null): Dependencies {
         return self::setup_singleton($cli);
     }
 

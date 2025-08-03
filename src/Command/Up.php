@@ -9,7 +9,7 @@ use App\StaticVars;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Options;
-use MChefCLI;
+use App\MChefCLI;
 
 class Up extends AbstractCommand {
 

@@ -13,9 +13,14 @@ use App\Service\RecipeParser;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Options;
-use MChefCLI;
+use App\MChefCLI;
 
 class ListAll extends AbstractCommand {
+    // Allow dependency injection for easier testing
+    protected $configurator;
+    protected $main;
+    protected $docker;
+    protected $recipeParser;
 
     use SingletonTrait;
     use ExecTrait;
@@ -28,11 +33,12 @@ class ListAll extends AbstractCommand {
     }
 
     public function execute(Options $options): void {
-        $instances = Configurator::instance($this->cli)->getInstanceRegistry();
-        $recipeParser = RecipeParser::instance();
-        $main = Main::instance($this->cli);
-        $docker = Docker::instance($this->cli);
-        $config = Configurator::instance($this->cli)->getMainConfig();
+        $configurator = $this->configurator ?? Configurator::instance($this->cli);
+        $main = $this->main ?? Main::instance($this->cli);
+        $docker = $this->docker ?? Docker::instance($this->cli);
+        $recipeParser = $this->recipeParser ?? RecipeParser::instance();
+        $instances = $configurator->getInstanceRegistry();
+        $config = $configurator->getMainConfig();
         $selectedInstance = $config->instance ?? null;
         foreach ($instances as $instance) {
             if (!file_exists($instance->recipePath)) {

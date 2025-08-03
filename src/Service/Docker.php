@@ -6,7 +6,7 @@ use App\Model\DockerContainer;
 use App\Model\DockerNetwork;
 use App\Traits\ExecTrait;
 use splitbrain\phpcli\Exception;
-use MChefCLI;
+use App\MChefCLI;
 
 class Docker extends AbstractService {
     use ExecTrait;

@@ -3,7 +3,7 @@
 namespace App\Traits;
 
 use App\Interfaces\SingletonInterface;
-use MChefCLI;
+use App\MChefCLI;
 use PHPUnit\Framework\MockObject\MockObject;
 
 trait SingletonTrait {

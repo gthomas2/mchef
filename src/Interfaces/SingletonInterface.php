@@ -2,6 +2,8 @@
 
 namespace App\Interfaces;
 
+use App\MChefCLI;
+
 Interface SingletonInterface {
 
     /**
@@ -10,6 +12,6 @@ Interface SingletonInterface {
      * @param CLI $cli
      * @return mixed
      */
-    function set_cli(\MChefCLI $cli);
+    function set_cli(MChefCLI $cli);
 
 }

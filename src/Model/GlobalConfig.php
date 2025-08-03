@@ -21,6 +21,12 @@ class GlobalConfig extends AbstractModel {
          * The name of the default instance you are currently using or null / empty for none selected
          * @var string|null
          */
-        public ?string $instance = null
+        public ?string $instance = null,
+
+        /**
+         * The default admin password for all recipes that don't define one.
+         * @var string|null
+         */
+        public ?string $adminPassword = null
     ) {}
 }
