@@ -55,7 +55,7 @@ class MChefCLI extends CLI {
     }
 
     private function welcomeLine() {
-        $welcomeLine = 'Mchef: '.self::$version;
+        $welcomeLine = 'Mchef: '.self::$version.' © Citricity 2024 onwards. www.citricity.com';
         $this->info($welcomeLine);
     }
 
@@ -100,6 +100,7 @@ class MChefCLI extends CLI {
 
     /**
      * Prompt user yes no, returning input OR returning callable depending on $onYes or $onNo.
+     *
      * @param string $msg
      * @param callable|null $onYes
      * @param callable|null $onNo

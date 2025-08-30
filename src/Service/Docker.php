@@ -159,8 +159,8 @@ class Docker extends AbstractService {
         $this->exec('docker start '.$containerName);
     }
 
-    public function execute(string $containerName, string $cmd): string {
-        return $this->exec('docker exec '.$containerName.' '.$cmd);
+    public function execute(string $containerName, string $cmd, ?string $options = null): string {
+        return $this->exec('docker exec '.($options ? $options.' ' : '').$containerName.' '.$cmd);
     }
 
     public function checkContainerRunning(string $containerName) {

@@ -25,8 +25,6 @@ class CopySrc extends AbstractCommand {
     const COMMAND_NAME = 'copysrc';
 
     protected Recipe $recipe;
-    protected string $moodleContainer;
-    protected Docker $dockerService;
 
     final public static function instance(MChefCLI $cli): CopySrc {
         $instance = self::setup_singleton($cli);
@@ -76,26 +74,33 @@ class CopySrc extends AbstractCommand {
     }
 
     public function execute(Options $options): void {
-        $this->cli->promptYesNo(
-            "Copying the moodle src into your project directory will wipe everything except your plugin files. Continue?",
-            null,
-            function() {
-                die;
-            });
-
         $this->setStaticVarsFromOptions($options);
         $instance = StaticVars::$instance;
         $instanceName = $instance->containerPrefix;
+        $projectDir = dirname($instance->recipePath);
+
+        $result = $this->cli->promptYesNo(
+            "Selected instance is $instanceName \nProject directory is $projectDir\nCopying the moodle src into your project directory will wipe everything except your plugin files. Continue?",
+            null,
+            function() {
+                return false;
+            });
+        if (!$result) {
+            return;
+        }
+
         Project::instance($this->cli)->purgeProjectFolderOfNonPluginCode($instanceName);
         $projectDir = dirname($instance->recipePath);
 
+        File::instance()->folderRestrictionCheck($projectDir, 'Copy files to this folder');
+
         $git = $projectDir.'/.git';
         if (file_exists($git)) {
-            // TODO - implement.
             $this->cli->promptYesNo("Your project folder seems to be a git project.\n".
-                "Would you like to exclude all core Moodle code by modifying your .gitignore?",
+                "Proceeding will exclude all core Moodle code by modifying your .gitignore file. Continue?",
                 function() { die('Not implemented yet!'); }
             );
+            die('Not implemented yet!');
         }
 
         $this->copySrc($instance);

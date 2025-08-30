@@ -95,7 +95,7 @@ class Database extends AbstractCommand {
     private function info() {
         $dbName = ($this->recipe->containerPrefix ?? 'mc').'-moodle';
         $dbContainer = ($this->recipe->containerPrefix ?? 'mc').'-db';
-        $localPortInfo = $this->recipe->dbHostPort ? " Local port = $this->recipe->dbHostPort " : '';
+        $localPortInfo = $this->recipe->dbHostPort ? " Local port = {$this->recipe->dbHostPort} " : '';
         $this->cli->info("Container = $dbContainer{$localPortInfo}Database = $dbName User {$this->recipe->dbUser} Password {$this->recipe->dbPassword}");
     }
 
