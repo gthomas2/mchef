@@ -8,7 +8,7 @@ use App\Model\Recipe;
 
 class RecipeParser extends AbstractService {
     final public static function instance(): RecipeParser {
-        return self::setup_instance();
+        return self::setup_singleton();
     }
 
     public function parse(string $filePath): Recipe {
@@ -21,6 +21,14 @@ class RecipeParser extends AbstractService {
             $recipe = ModelJSONDeserializer::instance()->deserialize($contents, Recipe::class);
         } catch (\Exception $e) {
             throw new Exception('Failed to decode recipe JSON. Recipe: '.$filePath, 0, $e);
+        }
+
+        // If adminPassword is not set in recipe, use global config value if available
+        if (empty($recipe->adminPassword)) {
+            $globalConfig = \App\Service\Configurator::instance()->getMainConfig();
+            if (!empty($globalConfig->adminPassword)) {
+                $recipe->adminPassword = $globalConfig->adminPassword;
+            }
         }
 
         // Validate required properties

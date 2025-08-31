@@ -10,9 +10,9 @@ class RecipePlugin extends AbstractModel {
         public string $repo,
 
         /**
-         * @var string - branch name (optional, defaults to 'master')
+         * @var string - branch name (optional, defaults to 'main')
          */
-        public string $branch = 'master',
+        public string $branch = 'main',
 
         /**
          * @var string|null - upstream repository URL (optional)

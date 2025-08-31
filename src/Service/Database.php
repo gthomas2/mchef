@@ -34,7 +34,7 @@ class Database extends AbstractService {
     }
 
     final public static function instance(): Database {
-        return self::setup_instance();
+        return self::setup_singleton();
     }
 
     private static function pdo(): PDO {

@@ -13,9 +13,14 @@ use App\Service\RecipeParser;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Options;
-use MChefCLI;
+use App\MChefCLI;
 
 class ListAll extends AbstractCommand {
+    // Allow dependency injection for easier testing
+    protected $configurator;
+    protected $main;
+    protected $docker;
+    protected $recipeParser;
 
     use SingletonTrait;
     use ExecTrait;
@@ -23,23 +28,25 @@ class ListAll extends AbstractCommand {
     const COMMAND_NAME = 'list';
 
     final public static function instance(MChefCLI $cli): ListAll {
-        $instance = self::setup_instance($cli);
+        $instance = self::setup_singleton($cli);
         return $instance;
     }
 
     public function execute(Options $options): void {
-        $instances = Configurator::instance($this->cli)->getInstanceRegistry();
-        $recipeParser = RecipeParser::instance();
-        $main = Main::instance($this->cli);
-        $docker = Docker::instance($this->cli);
-        $this->cli->info('Listing registered mchef instances...');
+        $configurator = $this->configurator ?? Configurator::instance($this->cli);
+        $main = $this->main ?? Main::instance($this->cli);
+        $docker = $this->docker ?? Docker::instance($this->cli);
+        $recipeParser = $this->recipeParser ?? RecipeParser::instance();
+        $instances = $configurator->getInstanceRegistry();
+        $config = $configurator->getMainConfig();
+        $selectedInstance = $config->instance ?? null;
         foreach ($instances as $instance) {
             if (!file_exists($instance->recipePath)) {
                 $this->cli->warning('⚠️ Recipe missing '.$instance->recipePath);
             }
 
             $recipe = $recipeParser->parse($instance->recipePath);
-            $moodleContainerName = $main->getDockerMoodleContainerName($recipe);
+            $moodleContainerName = $main->getDockerMoodleContainerName(null, $recipe);
 
             try {
                 $running = $docker->checkContainerRunning($moodleContainerName);
@@ -48,8 +55,9 @@ class ListAll extends AbstractCommand {
             }
 
             $symbol = $running ? '✅' : '⏸️ '; // Not sure why but we need an extra space after pause!
-            echo($symbol.' '.$instance->containerPrefix.' - '.($running ? 'up' : 'inactive'))."\n";
-
+            $selectedMark = ($selectedInstance && $instance->containerPrefix === $selectedInstance)
+                ? " \033[32m*SELECTED*\033[0m" : '';
+            echo($symbol.' '.$instance->containerPrefix.' - '.($running ? 'up' : 'inactive').$selectedMark."\n");
         }
     }
 

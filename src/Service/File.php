@@ -11,7 +11,7 @@ class File extends AbstractService {
     use ExecTrait;
 
     final public static function instance(): File {
-        return self::setup_instance();
+        return self::setup_singleton();
     }
 
     /**
@@ -42,7 +42,7 @@ class File extends AbstractService {
         return $this->exec($cmd, "Failed to copy files from $src to $target: {{output}}");
     }
 
-    private function folderRestrictionCheck(string $path, string $action) {
+    public function folderRestrictionCheck(string $path, string $action) {
         if (!is_dir($path)) {
             throw new Exception('Invalid path: ' . $path);
         }

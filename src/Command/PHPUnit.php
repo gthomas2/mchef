@@ -4,14 +4,16 @@ namespace App\Command;
 
 use App\Exceptions\ExecFailed;
 use App\Model\Plugin;
+use App\Service\Configurator;
 use App\Service\Docker;
 use App\Service\Main;
 use App\Service\Plugins;
+use App\StaticVars;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Exception;
 use splitbrain\phpcli\Options;
-use MChefCLI;
+use App\MChefCLI;
 
 class PHPUnit extends AbstractCommand {
 
@@ -21,20 +23,26 @@ class PHPUnit extends AbstractCommand {
     const COMMAND_NAME = 'phpunit';
 
     final public static function instance(MChefCLI $cli): PHPUnit {
-        $instance = self::setup_instance($cli);
+        $instance = self::setup_singleton($cli);
         return $instance;
     }
 
     public function execute(Options $options): void {
+        $this->setStaticVarsFromOptions($options);
+        $instance = StaticVars::$instance;
+        $instanceName = $instance->containerPrefix;
         $mainService = Main::instance($this->cli);
-        $recipe = $mainService->getRecipe();
+
+        $moodleContainer = $mainService->getDockerMoodleContainerName($instanceName);
+        $recipe = $mainService->getRecipe($instance->recipePath);
+
         $pluginsService = Plugins::instance($this->cli);
         if (!$recipe->includePhpUnit && !$recipe->developer) {
             throw new Exception('This recipe does not have includePhpUnit set to true, OR you need to run mchef.php [recipefile] again.');
         }
 
         $this->cli->notice('Initializing PHPUnit');
-        $moodleContainer = $mainService->getDockerMoodleContainerName();
+
         $cmd = 'docker exec -it '.$moodleContainer.' php /var/www/html/moodle/admin/tool/phpunit/cli/init.php';
         $this->execStream($cmd, 'Failed to initialize phpunit');
         $runCode = 'bash -c "cd /var/www/html/moodle && vendor/bin/phpunit';
@@ -60,7 +68,7 @@ class PHPUnit extends AbstractCommand {
                 }
                 $pluginTestPaths = [];
                 foreach ($plugins as $plugin) {
-                    $pluginTestPaths[] = $plugin->path.'/tests';
+                    $pluginTestPaths[] = '/var/www/html/moodle/'.$plugin->path.'/tests/*_test.php';
                 }
             } else if (!empty($groups)) {
                 $runMsg .= " for groups $groups";
@@ -95,5 +103,6 @@ class PHPUnit extends AbstractCommand {
             's', 'testsuite', self::COMMAND_NAME);
         $options->registerOption('filter', 'Filter which tests to run',
             'f', 'filter', self::COMMAND_NAME);
+        $options->registerArgument('instance', 'Instance name for Moodle bash shell (optional if instance selected, or run from project directory).', false, self::COMMAND_NAME);
     }
 }

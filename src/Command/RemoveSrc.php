@@ -8,10 +8,11 @@ use App\Service\File;
 use App\Service\Main;
 use App\Service\Plugins;
 use App\Service\Project;
+use App\StaticVars;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Options;
-use MChefCLI;
+use App\MChefCLI;
 
 class RemoveSrc extends AbstractCommand {
 
@@ -23,12 +24,22 @@ class RemoveSrc extends AbstractCommand {
     protected Recipe $recipe;
 
     final public static function instance(MChefCLI $cli): RemoveSrc {
-        $instance = self::setup_instance($cli);
+        $instance = self::setup_singleton($cli);
         return $instance;
     }
 
     public function execute(Options $options): void {
-        Project::instance($this->cli)->purgeProjectFolderOfNonPluginCode();
+        $this->cli->promptYesNo(
+            "Remove all your moodle source files. Continue?",
+            null,
+            function() {
+                die;
+            });
+
+        $this->setStaticVarsFromOptions($options);
+        $instanceName = StaticVars::$instance->containerPrefix;
+
+        Project::instance($this->cli)->purgeProjectFolderOfNonPluginCode($instanceName);
     }
 
     public function register(Options $options): void {

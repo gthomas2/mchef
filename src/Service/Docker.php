@@ -6,13 +6,13 @@ use App\Model\DockerContainer;
 use App\Model\DockerNetwork;
 use App\Traits\ExecTrait;
 use splitbrain\phpcli\Exception;
-use MChefCLI;
+use App\MChefCLI;
 
 class Docker extends AbstractService {
     use ExecTrait;
 
     final public static function instance(?MChefCLI $cli = null): Docker {
-        return self::setup_instance($cli);
+        return self::setup_singleton($cli);
     }
 
     private function getTableHeadingPositions(string $table, array $headings): array {
@@ -159,8 +159,8 @@ class Docker extends AbstractService {
         $this->exec('docker start '.$containerName);
     }
 
-    public function execute(string $containerName, string $cmd): string {
-        return $this->exec('docker exec '.$containerName.' '.$cmd);
+    public function execute(string $containerName, string $cmd, ?string $options = null): string {
+        return $this->exec('docker exec '.($options ? $options.' ' : '').$containerName.' '.$cmd);
     }
 
     public function checkContainerRunning(string $containerName) {

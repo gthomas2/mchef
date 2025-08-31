@@ -21,7 +21,7 @@ class ProxyService extends AbstractService {
     }
 
     final public static function instance(?CLI $cli = null): ProxyService {
-        return self::setup_instance($cli);
+        return self::setup_singleton($cli);
     }
 
     /**

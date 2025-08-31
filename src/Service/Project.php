@@ -2,20 +2,22 @@
 
 namespace App\Service;
 
+use splitbrain\phpcli\Exception;
+
 class Project extends AbstractService {
     final public static function instance(\MChefCLI $cli): Project {
-        return self::setup_instance($cli);
+        return self::setup_singleton($cli);
     }
 
-    public function getProjectDir() {
+    public function purgeProjectFolderOfNonPluginCode(string $instanceName) {
         $mainService = Main::instance($this->cli);
-        $chefPath = $mainService->getChefPath(true);
-        return realpath($chefPath . DIRECTORY_SEPARATOR . '..');
-    }
 
-    public function purgeProjectFolderOfNonPluginCode() {
-        $mainService = Main::instance($this->cli);
-        $projectDir = $this->getProjectDir();
+        $instance = Configurator::instance()->getRegisteredInstance($instanceName);
+        if (!$instance) {
+            throw new Exception ('Invalid instance '.$instance);
+        }
+        $this->recipe = $mainService->getRecipe($instance->recipePath);
+        $projectDir = dirname($instance->recipePath);
 
         $recipe = $mainService->getRecipe();
 

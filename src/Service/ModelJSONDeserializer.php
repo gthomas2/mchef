@@ -14,7 +14,7 @@ class ModelJSONDeserializer extends AbstractService {
     use SingletonTrait;
 
     final public static function instance(): ModelJSONDeserializer {
-        return self::setup_instance();
+        return self::setup_singleton();
     }
 
     /**

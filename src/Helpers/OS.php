@@ -2,8 +2,6 @@
 
 namespace App\Helpers;
 
-use App\Exceptions\CodingException;
-
 class OS {
     public static function isWindows(): bool {
         return stripos(PHP_OS, 'WIN') === 0;

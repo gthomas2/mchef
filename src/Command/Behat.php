@@ -5,14 +5,16 @@ namespace App\Command;
 use App\Exceptions\ExecFailed;
 use App\Helpers\OS;
 use App\Model\Plugin;
+use App\Service\Configurator;
 use App\Service\Docker;
 use App\Service\Main;
 use App\Service\Plugins;
+use App\StaticVars;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Exception;
 use splitbrain\phpcli\Options;
-use MChefCLI;
+use App\MChefCLI;
 
 class Behat extends AbstractCommand {
 
@@ -25,7 +27,7 @@ class Behat extends AbstractCommand {
     protected string $browser = 'chrome'; // Not configurable for now.
 
     final public static function instance(MChefCLI $cli): Behat {
-        $instance = self::setup_instance($cli);
+        $instance = self::setup_singleton($cli);
         return $instance;
     }
 
@@ -55,9 +57,14 @@ class Behat extends AbstractCommand {
     }
 
     public function execute(Options $options): void {
+        $mainService = Main::instance($this->cli);
+
+        $this->setStaticVarsFromOptions($options);
+        $instance = StaticVars::$instance;
+        $instanceName = $instance->containerPrefix;
+
         $tags = $options->getOpt('tags');
         $this->verbose = !empty($options->getOpt('verbose'));
-        $mainService = Main::instance($this->cli);
         $recipe = $mainService->getRecipe();
         if (!$recipe->includeBehat) {
             throw new Exception('This recipe does not have includeBehat set to true, OR you need to run mchef.php [recipefile] again.');
@@ -105,7 +112,7 @@ class Behat extends AbstractCommand {
         }
 
         $this->cli->notice('Initializing behat');
-        $moodleContainer = $mainService->getDockerMoodleContainerName();
+        $moodleContainer = $mainService->getDockerMoodleContainerName($instanceName);
         $cmd = 'docker exec -it '.$moodleContainer.' php /var/www/html/moodle/admin/tool/behat/cli/init.php --axe';
         $this->execStream($cmd, 'Failed to initialize behat');
         // !NOTE AWFUL, AWFUL BUG FIX!

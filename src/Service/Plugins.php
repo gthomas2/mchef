@@ -15,7 +15,7 @@ use splitbrain\phpcli\Options;
 
 class Plugins extends AbstractService {
     final public static function instance(CLI|MockObject $cli): Plugins {
-        return self::setup_instance($cli);
+        return self::setup_singleton($cli);
     }
 
     private function getMoodlePluginPath($pluginName): string {
@@ -222,16 +222,16 @@ class Plugins extends AbstractService {
             // First check if the branch exists on the remote repository
             $checkBranchCmd = "git ls-remote --heads $url $branch";
             exec($checkBranchCmd, $branchOutput, $branchReturnVar);
-            
+
             if ($branchReturnVar != 0) {
                 throw new Exception("Error checking remote repository: " . implode("\n", $branchOutput));
             }
-            
+
             // If no output, the branch doesn't exist
             if (empty($branchOutput)) {
                 throw new Exception("Branch '$branch' does not exist for repository '$url'");
             }
-            
+
             $cmd = "git clone $url --branch $branch $path";
         }
 
@@ -246,7 +246,7 @@ class Plugins extends AbstractService {
             // Check if the upstream branch exists on the upstream repository
             $checkUpstreamBranchCmd = "git ls-remote --heads $upstream $branch";
             exec($checkUpstreamBranchCmd, $upstreamOutput, $upstreamReturnVar);
-            
+
             if ($upstreamReturnVar != 0) {
                 $this->cli->warning("Could not check upstream repository '$upstream': " . implode("\n", $upstreamOutput));
             } elseif (empty($upstreamOutput)) {
@@ -255,7 +255,7 @@ class Plugins extends AbstractService {
                 // Add upstream remote
                 $addUpstreamCmd = "cd $path && git remote add upstream $upstream";
                 exec($addUpstreamCmd, $upstreamAddOutput, $upstreamAddReturnVar);
-                
+
                 if ($upstreamAddReturnVar != 0) {
                     $this->cli->warning("Failed to add upstream remote: " . implode("\n", $upstreamAddOutput));
                 } else {
@@ -277,7 +277,7 @@ class Plugins extends AbstractService {
         if (file_exists($pluginsInfoPath)) {
             try {
                 $object = unserialize(file_get_contents($pluginsInfoPath), [
-                    'allowed_classes' => [PluginsInfo::class, Plugin::class, Volume::class, \stdClass::class]]);
+                    'allowed_classes' => [PluginsInfo::class, RecipePlugin::class, Plugin::class, Volume::class, \stdClass::class]]);
             } catch (\Exception) {
                 return null;
             }
@@ -311,14 +311,17 @@ class Plugins extends AbstractService {
 
          }, $pluginsInfo->plugins);
 
-        $recipePlugins = array_map(
-            function($plugin) {
+        $recipePlugins = [];
+        if ($recipe->plugins) {
+            $recipePlugins = array_map(
+                function($plugin) {
 
-                $recipePlugin = $this->extractRepoInfoFromPlugin($plugin);
+                    $recipePlugin = $this->extractRepoInfoFromPlugin($plugin);
 
-                return $recipePlugin->repo;
+                    return $recipePlugin->repo;
 
-            }, $recipe->plugins);
+                }, $recipe->plugins);
+        }
 
         return empty(array_diff($pInfoRecipeSources, $recipePlugins)) && empty(array_diff($recipePlugins, $pInfoRecipeSources));
     }
@@ -338,6 +341,8 @@ class Plugins extends AbstractService {
             $this->cli->info('Using cached plugins info');
             return $mcPluginsInfo;
         }
+
+        $instance = Configurator::instance()->getRegisteredInstance($recipe->containerPrefix);
 
         if (empty($recipe->plugins)) {
             return null;
@@ -362,9 +367,7 @@ class Plugins extends AbstractService {
                             $pluginPath = $this->getMoodlePluginPath($pluginName);
                             $ds = DIRECTORY_SEPARATOR;
                             // Strip out accidental double dir separators from path.
-                            // TODO - suspect possible bug here - shouldnt be getcwd, should be project dir
-                            // will be fine so long as you run mchef in project root.
-                            $targetPath = str_replace("{$ds}{$ds}", $ds, OS::path(getcwd().$ds.$pluginPath));
+                            $targetPath = str_replace("{$ds}{$ds}", $ds, OS::path(dirname($instance->recipePath).$ds.$pluginPath));
                             if (!file_exists(OS::path($targetPath.'/version.php'))) {
                                 $this->cli->info('Moving plugin from temp folder to ' . $targetPath);
                                 if (!file_exists($targetPath) && !OS::isWindows()) {
@@ -441,7 +444,7 @@ class Plugins extends AbstractService {
      */
     public function getPluginsCsvFromOptions(Options $options): ?array {
         $mainService = (Main::instance($this->cli));
-        $recipe = $mainService->getRecipe();
+        $recipe = $mainService->getActiveInstanceRecipe();
         $pluginInfo = $this->getPluginsInfoFromRecipe($recipe);
         $pluginsCsv = $options->getOpt('plugins');
         if (!empty($pluginsCsv)) {
@@ -522,7 +525,6 @@ class Plugins extends AbstractService {
      * @return RecipePlugin
      */
     private function extractRepoInfoFromPlugin(mixed $plugin): RecipePlugin {
-
         if (is_object($plugin) && empty($plugin->repo)) {
             throw new Exception('Repo not set in plugin recipe');
         }
@@ -530,7 +532,7 @@ class Plugins extends AbstractService {
         if (is_object($plugin)) {
             return new RecipePlugin(
                 repo: $plugin->repo,
-                branch: $plugin->branch ?? 'master',
+                branch: $plugin->branch ?? 'main',
                 upstream: $plugin->upstream ?? null
             );
         }
