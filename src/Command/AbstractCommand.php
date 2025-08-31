@@ -8,7 +8,7 @@ use App\Service\Configurator;
 use App\Service\Main;
 use App\StaticVars;
 use App\Traits\SingletonTrait;
-use splitbrain\phpcli\Exception;
+use RuntimeException;
 use splitbrain\phpcli\Options;
 
 abstract class AbstractCommand implements SingletonInterface {
@@ -36,9 +36,14 @@ abstract class AbstractCommand implements SingletonInterface {
         } else {
             $instanceName = $mainService->resolveActiveInstanceName();
         }
+        if (empty($instanceName)) {
+            throw new RuntimeException(
+                'You must be in a project directory, or select an instance via `mchef use`.'
+            );
+        }
         $instance = Configurator::instance()->getRegisteredInstance($instanceName);
         if (!$instance) {
-            throw new Exception ('Invalid instance '.$instanceName);
+            throw new RuntimeException('Invalid instance '.$instanceName);
         }
         return $instance;
     }
