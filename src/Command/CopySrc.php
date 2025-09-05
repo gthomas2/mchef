@@ -4,8 +4,6 @@ namespace App\Command;
 
 use App\Model\Recipe;
 use App\Model\RegistryInstance;
-use App\Service\Configurator;
-use App\Service\Docker;
 use App\Service\File;
 use App\Service\Main;
 use App\Service\Plugins;
@@ -13,29 +11,32 @@ use App\Service\Project;
 use App\StaticVars;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
-use splitbrain\phpcli\Exception;
 use splitbrain\phpcli\Options;
-use App\MChefCLI;
 
-class CopySrc extends AbstractCommand {
+final class CopySrc extends AbstractCommand {
 
     use SingletonTrait;
     use ExecTrait;
 
+    // Service dependencies.
+    private Main $mainService;
+    private Plugins $pluginsService;
+    private Project $projectService;
+    private File $fileService;
+
+    // Constants.
     const COMMAND_NAME = 'copysrc';
 
     protected Recipe $recipe;
 
-    final public static function instance(MChefCLI $cli): CopySrc {
-        $instance = self::setup_singleton($cli);
-        return $instance;
+    public static function instance(): CopySrc {
+        return self::setup_singleton();
     }
 
     private function copySrc(RegistryInstance $instance): void {
-        $mainService = Main::instance($this->cli);
         $projectDir = dirname($instance->recipePath);
-        $this->recipe = $mainService->getRecipe($instance->recipePath);
-        $moodleContainer = $mainService->getDockerMoodleContainerName();
+        $this->recipe = $this->mainService->getRecipe($instance->recipePath);
+        $moodleContainer = $this->mainService->getDockerMoodleContainerName();
 
         // Create temp directory on guest moodle container.
         $cmd = 'mktemp -d -t XXXXXXXXXX';
@@ -49,7 +50,7 @@ class CopySrc extends AbstractCommand {
         // Remove plugin folders from tmpDir on guest.
         // This is essential to avoid copying paths that are volumes back to host which results in docker locking up.
         // We also don't want to wipe over local plugin work!
-        $pluginsInfo = Plugins::instance($this->cli)->getPluginsInfoFromRecipe($this->recipe);
+        $pluginsInfo = $this->pluginsService->getPluginsInfoFromRecipe($this->recipe);
         $paths = array_map(function($volume) { return $volume->path; }, $pluginsInfo->volumes);
         foreach ($paths as $path) {
             $cmd = 'docker exec '.$moodleContainer.' rm -rf '.$tmpDir.'/moodle/'.$path;
@@ -89,10 +90,10 @@ class CopySrc extends AbstractCommand {
             return;
         }
 
-        Project::instance($this->cli)->purgeProjectFolderOfNonPluginCode($instanceName);
+        $this->projectService->purgeProjectFolderOfNonPluginCode($instanceName);
         $projectDir = dirname($instance->recipePath);
 
-        File::instance()->folderRestrictionCheck($projectDir, 'Copy files to this folder');
+        $this->fileService->folderRestrictionCheck($projectDir, 'Copy files to this folder');
 
         $git = $projectDir.'/.git';
         if (file_exists($git)) {

@@ -4,24 +4,25 @@ namespace App\Command;
 
 use App\Service\Configurator;
 use App\Service\Docker;
-use App\Service\Main;
-use App\Service\RecipeParser;
 use App\StaticVars;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Options;
-use App\MChefCLI;
 
-class Halt extends AbstractCommand {
+final class Halt extends AbstractCommand {
 
     use SingletonTrait;
     use ExecTrait;
 
+    // Service dependencies.
+    private Docker $dockerService;
+    private Configurator $configuratorService;
+
+    // Constants
     const COMMAND_NAME = 'halt';
 
-    final public static function instance(MChefCLI $cli): Halt {
-        $instance = self::setup_singleton($cli);
-        return $instance;
+    public static function instance(): Halt {
+        return self::setup_singleton();
     }
 
     public function execute(Options $options): void {
@@ -51,8 +52,7 @@ class Halt extends AbstractCommand {
         $dbContainer = $containerPrefix . '-db';
         $behatContainer = $containerPrefix . '-behat';
 
-        $dockerService = Docker::instance($this->cli);
-        $containers = $dockerService->getDockerContainers(false);
+        $containers = $this->dockerService->getDockerContainers(false);
         $stoppedContainers = 0;
 
         $containersToStop = [$moodleContainer, $dbContainer];
@@ -63,7 +63,7 @@ class Halt extends AbstractCommand {
             // Stop if it matches our expected containers or starts with behat prefix
             if (in_array($name, $containersToStop) || strpos($name, $behatContainer) === 0) {
                 $this->cli->notice('Stopping container: ' . $name);
-                $dockerService->stopDockerContainer($name);
+                $this->dockerService->stopDockerContainer($name);
                 $stoppedContainers++;
             }
         }
@@ -79,7 +79,7 @@ class Halt extends AbstractCommand {
     }
 
     private function showRegistryInfo(string $containerPrefix): void {
-        $instances = Configurator::instance($this->cli)->getInstanceRegistry();
+        $instances = $this->configuratorService->getInstanceRegistry();
         $foundInstance = null;
 
         foreach ($instances as $instance) {

@@ -29,7 +29,7 @@ abstract class AbstractCommand implements SingletonInterface {
 
     protected function getInstanceFromOptions(Options $options): RegistryInstance {
         $args = $options->getArgs();
-        $mainService = Main::instance($this->cli);
+        $mainService = Main::instance();
         // If instance name is provided as argument
         if (!empty($args)) {
             $instanceName = $args[0];
@@ -54,7 +54,7 @@ abstract class AbstractCommand implements SingletonInterface {
         $defaultStr = $instance->isDefault ? 'default ' : '';
         $this->cli->info('-- Using '.$defaultStr.'instance "'.$instance->containerPrefix.'" --');
 
-        $mainService = Main::instance($this->cli);
+        $mainService = Main::instance();
         $recipe = $mainService->getRecipe(StaticVars::$instance->recipePath);
         StaticVars::$recipe = $recipe;
     }

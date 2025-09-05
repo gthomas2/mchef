@@ -3,32 +3,29 @@
 namespace App\Service;
 
 use App\Helpers\OS;
-use App\Model\GlobalConfig;
-use App\Model\RegistryInstance;
 use App\Model\Recipe;
 use App\Traits\ExecTrait;
-use splitbrain\phpcli\CLI;
 
-class ProxyService extends AbstractService {
+final class ProxyService extends AbstractService {
 
     use ExecTrait;
+
+    // Dependencies
+    private Configurator $configuratorService;
+    private RecipeService $recipeService;
 
     const PROXY_CONTAINER_NAME = 'mchef-proxy';
     const PROXY_PORT = 80;
 
-    protected function __construct() {
-        // Initialize
-    }
-
-    final public static function instance(?CLI $cli = null): ProxyService {
-        return self::setup_singleton($cli);
+    public static function instance(): ProxyService {
+        return self::setup_singleton();
     }
 
     /**
      * Check if proxy mode is enabled in global config
      */
     public function isProxyModeEnabled(): bool {
-        $globalConfig = Configurator::instance($this->cli)->getMainConfig();
+        $globalConfig = $this->configuratorService->getMainConfig();
         return $globalConfig->useProxy ?? false;
     }
 
@@ -109,7 +106,7 @@ class ProxyService extends AbstractService {
      * Get the path to the proxy configuration file
      */
     public function getProxyConfigPath(): string {
-        $configDir = Configurator::instance($this->cli)->configDir();
+        $configDir = $this->configuratorService->configDir();
         return OS::path($configDir . '/proxy.conf');
     }
 
@@ -117,7 +114,7 @@ class ProxyService extends AbstractService {
      * Generate and write the nginx proxy configuration
      */
     public function generateProxyConfig(): void {
-        $instances = Configurator::instance($this->cli)->getInstanceRegistry();
+        $instances = $this->configuratorService->getInstanceRegistry();
         $config = $this->buildNginxConfig($instances);
 
         $configPath = $this->getProxyConfigPath();
@@ -147,8 +144,7 @@ class ProxyService extends AbstractService {
                 $config .= "    server host.docker.internal:{$instance->proxyModePort};\n";
                 $config .= "}\n\n";
 
-                $recipeParser = RecipeParser::instance();
-                $behatHost = $recipeParser->getBehatHost($recipe);
+                $behatHost = $this->recipe->getBehatHost($recipe);
                 $serverName = $recipe->host;
                 if ($behatHost) {
                     $serverName .= ' '.$behatHost;

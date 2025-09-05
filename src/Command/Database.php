@@ -12,22 +12,27 @@ use App\StaticVars;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Options;
-use App\MChefCLI;
 
-class Database extends AbstractCommand {
+final class Database extends AbstractCommand {
 
     use SingletonTrait;
     use ExecTrait;
 
-    protected RegistryInstance $instance;
-    protected Recipe $recipe;
-    protected DatabaseInterface $database;
+    // Service dependencies.
+    private Main $mainService;
+    private Docker $dockerService;
+
+    // Models.
+    private RegistryInstance $instance;
+    private Recipe $recipe;
+
+    // Other
+    private DatabaseInterface $database;
 
     const COMMAND_NAME = 'database';
 
-    final public static function instance(MChefCLI $cli): Database {
-        $instance = self::setup_singleton($cli);
-        return $instance;
+    final public static function instance(): Database {
+        return self::setup_singleton();
     }
 
     private function execDatabase() {
@@ -78,9 +83,9 @@ class Database extends AbstractCommand {
             exit(1);
         }
         $this->instance = StaticVars::$instance;
-        $mainService = Main::instance($this->cli);
-        $this->recipe = $mainService->getRecipe($this->instance->recipePath);
+
         $this->database = $this->resolveDatabase();
+        $this->recipe = $this->mainService->getRecipe($this->instance->recipePath);
 
         if (!empty($options->getOpt('wipe'))) {
             $this->wipeDatabase();

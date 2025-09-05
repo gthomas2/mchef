@@ -2,37 +2,32 @@
 
 namespace App\Command;
 
-use App\Model\Recipe;
 use App\Service\Configurator;
-use App\Service\Docker;
-use App\Service\File;
-use App\Service\Main;
-use App\Service\Plugins;
-use App\Service\Project;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Options;
-use App\MChefCLI;
 
 class UseCmd extends AbstractCommand {
 
     use SingletonTrait;
     use ExecTrait;
 
+    // Service dependencies.
+    private Configurator $configuratorService;
+
     const COMMAND_NAME = 'use';
 
-    final public static function instance(MChefCLI $cli): UseCmd {
-        $instance = self::setup_singleton($cli);
-        return $instance;
+    final public static function instance(): UseCmd {
+        return self::setup_singleton();
     }
 
     private function setInstance(string $instance) {
-        Configurator::instance($this->cli)->setMainConfigField('instance', $instance);
+        $this->configuratorService->setMainConfigField('instance', $instance);
         $this->cli->success('Active instance is now "'.$instance.'"');
     }
 
     private function validateInstance(string $instanceName) {
-        $instances = Configurator::instance($this->cli)->getInstanceRegistry();
+        $instances = $this->configuratorService->getInstanceRegistry();
         $names = array_map(function ($inst) {
             return $inst->containerPrefix;
         }, $instances);

@@ -7,11 +7,11 @@ use App\Traits\ExecTrait;
 use splitbrain\phpcli\Exception;
 use splitbrain\phpcli\CLI;
 
-class InstallToBin extends AbstractService {
+final class InstallToBin extends AbstractService {
     use ExecTrait;
 
-    final public static function instance(CLI $cli): InstallToBin {
-        return self::setup_singleton($cli);
+    public static function instance(): InstallToBin {
+        return self::setup_singleton();
     }
 
     protected function get_php_executable_path() {

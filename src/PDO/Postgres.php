@@ -15,7 +15,7 @@ class Postgres extends PDO {
             throw new \Exception('Database type is not pgsql!');
         }
 
-        $mainService = Main::instance($this->cli);
+        $mainService = Main::instance();
         $dbContainer = $mainService->getDockerDatabaseContainerName();
 
         parent::__construct("pgsql:host=$dbContainer;port=5432;dbname=$recipe->dbName",

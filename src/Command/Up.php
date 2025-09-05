@@ -3,24 +3,26 @@
 namespace App\Command;
 
 use App\Service\Configurator;
-use App\Service\Main;
 use App\Service\ProxyService;
 use App\StaticVars;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Options;
-use App\MChefCLI;
 
 class Up extends AbstractCommand {
 
     use SingletonTrait;
     use ExecTrait;
 
+    // Service dependencies.
+    private Configurator $configuratorService;
+    private ProxyService $proxyService;
+
+    // Constants.
     const COMMAND_NAME = 'up';
 
-    final public static function instance(MChefCLI $cli): Up {
-        $instance = self::setup_singleton($cli);
-        return $instance;
+    final public static function instance(): Up {
+        return self::setup_singleton();
     }
 
     public function execute(Options $options): void {
@@ -67,8 +69,7 @@ class Up extends AbstractCommand {
         $this->startContainers([$moodleContainer, $dbContainer]);
 
         // Handle proxy mode
-        $proxyService = ProxyService::instance($this->cli);
-        $proxyService->ensureProxyRunning();
+        $this->proxyService->ensureProxyRunning();
 
         $this->cli->success('Containers started successfully!');
     }
@@ -77,7 +78,7 @@ class Up extends AbstractCommand {
         $this->cli->error("Missing containers for prefix: $containerPrefix");
 
         // Try to find the project directory from registry for helpful error message
-        $instances = Configurator::instance($this->cli)->getInstanceRegistry();
+        $instances = $this->configuratorService->getInstanceRegistry();
         $foundInstance = null;
 
         foreach ($instances as $instance) {

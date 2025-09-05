@@ -3,29 +3,28 @@
 namespace App\Command;
 
 use App\Model\Recipe;
-use App\Service\Docker;
-use App\Service\File;
-use App\Service\Main;
-use App\Service\Plugins;
 use App\Service\Project;
 use App\StaticVars;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Options;
-use App\MChefCLI;
 
 class RemoveSrc extends AbstractCommand {
 
     use SingletonTrait;
     use ExecTrait;
 
-    const COMMAND_NAME = 'removesrc';
+    // Service dependencies.
+    private Project $projectService;
 
+    // Models.
     protected Recipe $recipe;
 
-    final public static function instance(MChefCLI $cli): RemoveSrc {
-        $instance = self::setup_singleton($cli);
-        return $instance;
+    // Constants.
+    const COMMAND_NAME = 'removesrc';
+
+    final public static function instance(): RemoveSrc {
+        return self::setup_singleton();
     }
 
     public function execute(Options $options): void {
@@ -39,7 +38,7 @@ class RemoveSrc extends AbstractCommand {
         $this->setStaticVarsFromOptions($options);
         $instanceName = StaticVars::$instance->containerPrefix;
 
-        Project::instance($this->cli)->purgeProjectFolderOfNonPluginCode($instanceName);
+        $this->projectService->purgeProjectFolderOfNonPluginCode($instanceName);
     }
 
     public function register(Options $options): void {

@@ -3,15 +3,13 @@
 namespace App\Tests;
 
 use App\Model\RegistryInstance;
-use App\Service\Configurator;
 use App\Service\ProxyService;
-use PHPUnit\Framework\TestCase;
 
-class ProxyModeTest extends TestCase {
+class ProxyModeTest extends MchefTestCase {
 
     public function testRegistryInstanceWithProxyPort(): void {
         $instance = new RegistryInstance('test-uuid', '/test/path', 'test-prefix', 8100);
-        
+
         $this->assertEquals('test-uuid', $instance->uuid);
         $this->assertEquals('/test/path', $instance->recipePath);
         $this->assertEquals('test-prefix', $instance->containerPrefix);
@@ -20,7 +18,7 @@ class ProxyModeTest extends TestCase {
 
     public function testRegistryInstanceWithoutProxyPort(): void {
         $instance = new RegistryInstance('test-uuid', '/test/path', 'test-prefix');
-        
+
         $this->assertEquals('test-uuid', $instance->uuid);
         $this->assertEquals('/test/path', $instance->recipePath);
         $this->assertEquals('test-prefix', $instance->containerPrefix);
@@ -29,7 +27,7 @@ class ProxyModeTest extends TestCase {
 
     public function testProxyServiceIsProxyModeEnabled(): void {
         $proxyService = ProxyService::instance();
-        
+
         // This test depends on the current global config
         // We're just testing that the method doesn't throw an error
         $result = $proxyService->isProxyModeEnabled();
@@ -39,7 +37,7 @@ class ProxyModeTest extends TestCase {
     public function testProxyServiceConfigPath(): void {
         $proxyService = ProxyService::instance();
         $configPath = $proxyService->getProxyConfigPath();
-        
+
         $this->assertIsString($configPath);
         $this->assertStringContainsString('proxy.conf', $configPath);
     }

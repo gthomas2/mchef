@@ -1,10 +1,12 @@
-<?php declare(strict_types=1);
+<?php
+
+namespace App\Tests;
 
 use App\Model\Recipe;
 use App\Service\ModelJSONDeserializer;
 use PHPUnit\Framework\TestCase;
 
-final class ModelJSONDeserializerTest extends TestCase {
+final class ModelJSONDeserializerTest extends MchefTestCase {
 
     public function testDeserializeSimpleRecipe(): void {
         $json = '{
@@ -91,7 +93,7 @@ final class ModelJSONDeserializerTest extends TestCase {
         $this->assertEquals('testuser', $recipe->dbUser);
         $this->assertEquals('testpass', $recipe->dbPassword);
         $this->assertEquals('test', $recipe->containerPrefix);
-        
+
         // Test plugins array
         $this->assertIsArray($recipe->plugins);
         $this->assertCount(2, $recipe->plugins);
@@ -137,10 +139,10 @@ final class ModelJSONDeserializerTest extends TestCase {
 
     public function testInvalidJSON(): void {
         $invalidJson = '{invalid json}';
-        
+
         $this->expectException(\splitbrain\phpcli\Exception::class);
         $this->expectExceptionMessage('Invalid JSON');
-        
+
         $deserializer = ModelJSONDeserializer::instance();
         $deserializer->deserialize($invalidJson, Recipe::class);
     }
@@ -149,20 +151,20 @@ final class ModelJSONDeserializerTest extends TestCase {
         $json = '{
             "phpVersion": "8.0"
         }';
-        
+
         $this->expectException(\splitbrain\phpcli\Exception::class);
         $this->expectExceptionMessage("Required parameter 'moodleTag' missing");
-        
+
         $deserializer = ModelJSONDeserializer::instance();
         $deserializer->deserialize($json, Recipe::class);
     }
 
     public function testNonExistentModelClass(): void {
         $json = '{"test": "value"}';
-        
+
         $this->expectException(\splitbrain\phpcli\Exception::class);
         $this->expectExceptionMessage('Model class does not exist');
-        
+
         $deserializer = ModelJSONDeserializer::instance();
         $deserializer->deserialize($json, 'NonExistentClass');
     }
@@ -189,15 +191,15 @@ final class ModelJSONDeserializerTest extends TestCase {
         $this->assertEquals('v4.1.0', $recipe->moodleTag);
         $this->assertEquals('8.0', $recipe->phpVersion);
         $this->assertEquals('plugin-models-test', $recipe->name);
-        
+
         // Test plugins array with mixed types
         $this->assertIsArray($recipe->plugins);
         $this->assertCount(2, $recipe->plugins);
-        
+
         // First plugin should be a string
         $this->assertIsString($recipe->plugins[0]);
         $this->assertEquals('https://github.com/user/simple-plugin.git', $recipe->plugins[0]);
-        
+
         // Second plugin should be a RecipePlugin model
         $this->assertInstanceOf(\App\Model\RecipePlugin::class, $recipe->plugins[1]);
         $this->assertEquals('https://github.com/gthomas2/moodle-filter_imageopt', $recipe->plugins[1]->repo);

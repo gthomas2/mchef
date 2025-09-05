@@ -2,7 +2,6 @@
 
 namespace App\Service;
 
-use App\Command\Config;
 use App\Helpers\OS;
 use App\Model\DockerData;
 use App\Model\PluginsInfo;
@@ -10,43 +9,28 @@ use App\Model\Recipe;
 use App\Model\RegistryInstance;
 use App\StaticVars;
 use App\Traits\ExecTrait;
-use splitbrain\phpcli\CLI;
 use splitbrain\phpcli\Exception;
 
 class Main extends AbstractService {
 
     use ExecTrait;
 
-    /**
-     * @var Recipe
-     */
-    private $recipe;
-    /**
-     * @var Recipe
-     */
-    private $dockerService;
+    // Dependencies
+    private Docker $dockerService;
+    private Plugins $pluginsService;
+    private Configurator $configuratorService;
+    private File $fileService;
+    private RecipeService $recipeService;
+    private ProxyService $proxyService;
 
-    /**
-     * @var Plugins plugins service
-     */
-    private $pluginsService;
-
-    /**
-     * @var PluginsInfo|null
-     */
+    // Models
+    private Recipe $recipe;
     private ?PluginsInfo $pluginInfo = null;
-
-    /**
-     * @var \Twig\Environment
-     */
-    private \Twig\Environment $twig;
-
-    /**
-     * @var string|null $chefPath
-     */
-    private ?string $chefPath = null;
-
     private DockerData $dockerData;
+
+    // Other properties
+    private \Twig\Environment $twig;
+    private ?string $chefPath = null;
 
     protected function __construct() {
         $loader = new \Twig\Loader\FilesystemLoader(__DIR__.'/../../templates');
@@ -54,10 +38,11 @@ class Main extends AbstractService {
         $loader->addPath(__DIR__.'/../../templates/moodle/browser', 'moodle-browser');
         $loader->addPath(__DIR__.'/../../templates/docker', 'docker');
         $this->twig = new \Twig\Environment($loader);
+        parent::__construct();
     }
 
-    final public static function instance(?CLI $cli): Main {
-        return self::setup_singleton($cli);
+    final public static function instance(): Main {
+        return self::setup_singleton();
     }
 
     public function getChefPath($failOnNotFound = false): ?string {
@@ -65,13 +50,12 @@ class Main extends AbstractService {
             return $this->chefPath;
         }
 
-        $configurator = Configurator::instance($this->cli);
-        $instanceName = $configurator->getMainConfig()->instance;
+        $instanceName = $this->configuratorService->getMainConfig()->instance;
         if ($instanceName) {
-            $instance = $configurator->getRegisteredInstance($instanceName);
+            $instance = $this->configuratorService->getRegisteredInstance($instanceName);
             $chefPath = OS::path(dirname($instance->recipePath).'/.mchef');
         } else {
-            $chefPath = File::instance()->findFileInOrAboveDir('.mchef');
+            $chefPath = $this->fileService->findFileInOrAboveDir('.mchef');
         }
         if ($failOnNotFound && !is_dir($chefPath)) {
             $this->cli->alert('Your current working directory, or the directories above it, do not contain a .mchef directory');
@@ -82,7 +66,7 @@ class Main extends AbstractService {
     }
 
     public function resolveActiveInstanceName(): ?string {
-        $config = Configurator::instance()->getMainConfig();
+        $config = $this->configuratorService->getMainConfig();
         if (!empty($config->instance)) {
             return $config->instance;
         }
@@ -99,7 +83,7 @@ class Main extends AbstractService {
 
     public function resolveActiveInstance(?string $instanceName): ?RegistryInstance {
         $instanceName = $instanceName ?? $this->resolveActiveInstanceName();
-        return Configurator::instance()->getRegisteredInstance($instanceName);
+        return $this->configuratorService->getRegisteredInstance($instanceName);
     }
 
     public function getDockerPath() {
@@ -112,8 +96,7 @@ class Main extends AbstractService {
 
     public function getHostPort(?Recipe $recipe = null): int {
         $recipe = $recipe ?? $this->recipe;
-        $configurator = Configurator::instance($this->cli);
-        $config = $configurator->getMainConfig();
+        $config = $this->configuratorService->getMainConfig();
 
         if (!empty($config->useProxy)) {
             return $this->establishDockerData()->proxyModePort;
@@ -151,11 +134,10 @@ class Main extends AbstractService {
 
     public function startContainers(): void {
         $this->cli->notice('Starting containers');
-        $dockerService = Docker::instance($this->cli);
         $moodleContainer = $this->getDockerMoodleContainerName();
-        $dockerService->startDockerContainer($moodleContainer);
+        $this->dockerService->startDockerContainer($moodleContainer);
         $dbContainer = $this->getDockerDatabaseContainerName();
-        $dockerService->startDockerContainer($dbContainer);
+        $this->dockerService->startDockerContainer($dbContainer);
 
         $this->cli->success('All containers have been started');
     }
@@ -176,14 +158,13 @@ class Main extends AbstractService {
             $dbContainer
         ];
 
-        $dockerService = Docker::instance($this->cli);
-        $containers = $dockerService->getDockerContainers(false);
+        $containers = $this->dockerService->getDockerContainers(false);
         $stoppedContainers = 0;
         foreach ($containers as $container) {
             $name = $container->names;
             $this->cli->notice('Stopping container: '.$name);
             if (in_array($name, $toStop)) {
-                $dockerService->stopDockerContainer($name);
+                $this->dockerService->stopDockerContainer($name);
                 $stoppedContainers++;
             }
         }
@@ -196,11 +177,10 @@ class Main extends AbstractService {
     }
 
     private function configureDockerNetwork(Recipe $recipe): void {
-        $dockerService = Docker::instance($this->cli);
         // TODO LOW priority- default should be mc-network unless defined in recipe or main config.
         $networkName = 'mc-network';
 
-        if ($dockerService->networkExists($networkName)) {
+        if ($this->dockerService->networkExists($networkName)) {
             $this->cli->info('Skipping creating network as it exists: '.$networkName);
         } else {
             $this->cli->info('Configuring network ' . $networkName);
@@ -266,7 +246,7 @@ class Main extends AbstractService {
                 $this->cli->notice('Installing DB');
 
                 // Get language and admin password
-                $globalConfig = Configurator::instance($this->cli)->getMainConfig();
+                $globalConfig = $this->configuratorService->getMainConfig();
                 $lang = $globalConfig->lang ?? 'en';
                 $adminPasswordRaw = $recipe->adminPassword ?? $globalConfig->adminPassword ?? '123456';
                 // Bash-safe escaping: wrap in single quotes and escape any single quotes inside
@@ -305,8 +285,7 @@ class Main extends AbstractService {
     }
 
     private function checkPortBinding(Recipe $recipe): bool {
-      $dockerService = Docker::instance($this->cli);
-      return $dockerService->checkPortAvailable($this->getHostPort($recipe));
+      return $this->dockerService->checkPortAvailable($this->getHostPort($recipe));
     }
 
     public function hostPath() : string {
@@ -387,8 +366,7 @@ class Main extends AbstractService {
     }
 
     private function parseRecipe(string $recipeFilePath): Recipe {
-        $parser = (RecipeParser::instance());
-        $recipe = $parser->parse($recipeFilePath);
+        $recipe = $this->recipeService->parse($recipeFilePath);
         $this->cli->success('Recipe successfully parsed.');
         return $recipe;
     }
@@ -449,7 +427,7 @@ class Main extends AbstractService {
         if (!empty($this->dockerData)) {
             return $this->dockerData;
         }
-        $this->pluginInfo = (Plugins::instance($this->cli))->getPluginsInfoFromRecipe($this->recipe);
+        $this->pluginInfo = $this->pluginsService->getPluginsInfoFromRecipe($this->recipe);
         $volumes = $this->pluginInfo ? $this->pluginInfo->volumes : [];
         if ($volumes) {
             $this->cli->info('Volumes will be created for plugins: '.implode("\n", array_map(function($vol) {return $vol->path;}, $volumes)));
@@ -498,7 +476,7 @@ class Main extends AbstractService {
             }
         }
 
-        $this->pluginInfo = (Plugins::instance($this->cli))->getPluginsInfoFromRecipe($recipe);
+        $this->pluginInfo = $this->pluginsService->getPluginsInfoFromRecipe($recipe);
         $volumes = $this->pluginInfo ? $this->pluginInfo->volumes : [];
         if ($volumes) {
             $this->cli->info('Volumes will be created for plugins: '.implode("\n", array_map(function($vol) {return $vol->path;}, $volumes)));
@@ -522,15 +500,14 @@ class Main extends AbstractService {
         $regUuid = $this->getRegisteredUuid($chefPath);
         $this->cli->notice('Registering instance in main config');
 
-        $configurator = Configurator::instance($this->cli);
-        $configurator->registerInstance(realPath($recipeFilePath), $regUuid, $recipe->containerPrefix);
+        $this->configuratorService->registerInstance(realPath($recipeFilePath), $regUuid, $recipe->containerPrefix);
         // Now get the updated proxy information after registration
-        $globalConfig = $configurator->getMainConfig();
+        $globalConfig = $this->configuratorService->getMainConfig();
         $useProxy = $globalConfig->useProxy ?? false;
 
         // Get proxy port for this instance if in proxy mode
         if ($useProxy) {
-            $instances = $configurator->getInstanceRegistry();
+            $instances = $this->configuratorService->getInstanceRegistry();
             foreach ($instances as $instance) {
                 if ($instance->containerPrefix === $recipe->containerPrefix && $instance->proxyModePort !== null) {
                     $dockerData->proxyModePort = $instance->proxyModePort;
@@ -569,16 +546,15 @@ class Main extends AbstractService {
         $this->configureDockerNetwork($recipe);
 
         // Handle proxy mode
-        $proxyService = ProxyService::instance($this->cli);
-        $proxyService->ensureProxyRunning();
-        $proxyService->updateProxyConfiguration();
+        $this->proxyService->ensureProxyRunning();
+        $this->proxyService->updateProxyConfiguration();
 
         // Print out wwwroot
         $this->cli->notice('Your mchef-Moodle is now available at: ' . $recipe->wwwRoot );
     }
 
     public function getRecipe(?string $recipeFilePath = null): Recipe {
-        if ($this->recipe) {
+        if (!empty($this->recipe)) {
             return $this->recipe;
         }
         $mchefPath = $this->getChefPath();
@@ -593,20 +569,11 @@ class Main extends AbstractService {
 
     public function getActiveInstanceRecipe(): Recipe {
         $instanceName = $this->resolveActiveInstanceName();
-        $config = Configurator::instance($this->cli);
-        $instance = $config->getRegisteredInstance($instanceName);
+        $instance = $this->configuratorService->getRegisteredInstance($instanceName);
         if (!$instance) {
             throw new \Exception('Failed to get instance '.$instanceName);
         }
         return $this->getRecipe($instance->recipePath);
-    }
-
-    public function getPluginInfo(): ?PluginsInfo {
-        return $this->pluginInfo;
-    }
-
-    public function getPluginService() {
-        return $this->pluginsService;
     }
 
     private function getDockerContainerName(string $suffix, ?string $instanceName = null, ?Recipe $recipe = null, ?string $recipeFilePath = null) {

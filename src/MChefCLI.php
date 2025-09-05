@@ -27,6 +27,11 @@ class MChefCLI extends CLI {
      */
     public bool $verbose = false;
 
+    public function __construct($autocatch = true) {
+        parent::__construct($autocatch);
+        StaticVars::$cli = $this;
+    }
+
     private function registerCommands(Options $options) {
         $files = scandir(OS::path(__DIR__.'/../src/Command'));
 

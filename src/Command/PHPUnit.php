@@ -2,10 +2,6 @@
 
 namespace App\Command;
 
-use App\Exceptions\ExecFailed;
-use App\Model\Plugin;
-use App\Service\Configurator;
-use App\Service\Docker;
 use App\Service\Main;
 use App\Service\Plugins;
 use App\StaticVars;
@@ -13,30 +9,28 @@ use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Exception;
 use splitbrain\phpcli\Options;
-use App\MChefCLI;
 
-class PHPUnit extends AbstractCommand {
+final class PHPUnit extends AbstractCommand {
 
     use SingletonTrait;
     use ExecTrait;
 
     const COMMAND_NAME = 'phpunit';
 
-    final public static function instance(MChefCLI $cli): PHPUnit {
-        $instance = self::setup_singleton($cli);
-        return $instance;
+    public static function instance(): PHPUnit {
+        return self::setup_singleton();
     }
 
     public function execute(Options $options): void {
         $this->setStaticVarsFromOptions($options);
         $instance = StaticVars::$instance;
         $instanceName = $instance->containerPrefix;
-        $mainService = Main::instance($this->cli);
+        $mainService = Main::instance();
 
         $moodleContainer = $mainService->getDockerMoodleContainerName($instanceName);
         $recipe = $mainService->getRecipe($instance->recipePath);
 
-        $pluginsService = Plugins::instance($this->cli);
+        $pluginsService = Plugins::instance();
         if (!$recipe->includePhpUnit && !$recipe->developer) {
             throw new Exception('This recipe does not have includePhpUnit set to true, OR you need to run mchef.php [recipefile] again.');
         }

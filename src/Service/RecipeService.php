@@ -6,8 +6,14 @@ use splitbrain\phpcli\Exception;
 use stdClass;
 use App\Model\Recipe;
 
-class RecipeParser extends AbstractService {
-    final public static function instance(): RecipeParser {
+class RecipeService extends AbstractService {
+
+    // Dependencies
+    protected ModelJSONDeserializer $deserializerService;
+    protected Configurator $configuratorService;
+    protected PHPVersions $phpVersionsService;
+
+    final public static function instance(): RecipeService {
         return self::setup_singleton();
     }
 
@@ -18,14 +24,14 @@ class RecipeParser extends AbstractService {
         $contents = file_get_contents($filePath);
 
         try {
-            $recipe = ModelJSONDeserializer::instance()->deserialize($contents, Recipe::class);
+            $recipe = $this->deserializerService->deserialize($contents, Recipe::class);
         } catch (\Exception $e) {
             throw new Exception('Failed to decode recipe JSON. Recipe: '.$filePath, 0, $e);
         }
 
         // If adminPassword is not set in recipe, use global config value if available
         if (empty($recipe->adminPassword)) {
-            $globalConfig = \App\Service\Configurator::instance()->getMainConfig();
+            $globalConfig = $this->configuratorService->getMainConfig();
             if (!empty($globalConfig->adminPassword)) {
                 $recipe->adminPassword = $globalConfig->adminPassword;
             }
@@ -44,7 +50,7 @@ class RecipeParser extends AbstractService {
         // Validate required properties - these are already validated by the constructor
         // but we can add additional business logic validation here
 
-        $validPHPVersions = (PHPVersions::instance())->listVersions();
+        $validPHPVersions = $this->phpVersionsService->listVersions();
         if (!in_array($recipe->phpVersion, $validPHPVersions)) {
             $supported = implode(', ', $validPHPVersions);
             throw new Exception("Unsupported php version $recipe->phpVersion - supported versions are $supported");

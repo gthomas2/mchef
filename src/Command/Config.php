@@ -2,29 +2,44 @@
 
 namespace App\Command;
 
-use App\Model\Recipe;
 use App\Service\Configurator;
-use App\Service\Docker;
-use App\Service\File;
-use App\Service\Main;
-use App\Service\Plugins;
-use App\Service\Project;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Options;
-use App\MChefCLI;
 
-class Config extends AbstractCommand {
+final class Config extends AbstractCommand {
 
     use SingletonTrait;
     use ExecTrait;
 
     const COMMAND_NAME = 'config';
 
-    final public static function instance(MChefCLI $cli): Config {
-        $instance = self::setup_singleton($cli);
-        return $instance;
+    // Service dependencies
+    private Configurator $configuratorService;
+
+    public static function instance(): Config {
+        return self::setup_singleton();
     }
+
+    public const DB_CLIENT_OPTIONS = [
+        'dbeaver',
+        'pgadmin',
+        'mysql workbench',
+        'psql (cli)',
+        'mysql (cli)'
+    ];
+
+    public const DB_CLIENT_MYSQL_OPTIONS = [
+        'dbeaver',
+        'mysql workbench',
+        'mysql (cli)'
+    ];
+
+    public const DB_CLIENT_PGSQL_OPTIONS = [
+        'dbeaver',
+        'pgadmin',
+        'psql (cli)'
+    ];
 
     private function validateLang(string $langCode) {
         $moodleLangCodes = [
@@ -45,17 +60,17 @@ class Config extends AbstractCommand {
 
     private function setLang(string $langCode) {
         $this->validateLang($langCode);
-        Configurator::instance($this->cli)->setMainConfigField('lang', $langCode);
+        $this->configuratorService->setMainConfigField('lang', $langCode);
         $this->cli->notice("Default language code has been set. Note - will only affect new installs");
     }
 
     private function setPassword(string $password) {
-        Configurator::instance($this->cli)->setMainConfigField('adminPassword', $password);
+        $this->configuratorService->setMainConfigField('adminPassword', $password);
         $this->cli->notice("Default admin password has been set. Note - will only affect new installs");
     }
 
     private function setProxy(bool $proxy) {
-        Configurator::instance($this->cli)->setMainConfigField('useProxy', $proxy);
+        $this->configuratorService->setMainConfigField('useProxy', $proxy);
         $this->cli->notice("Local reverse proxy settings changed.\n".
             "NOTE: You will need to stop all your mchef instances and re-up them to use the new settings");
     }
@@ -71,9 +86,50 @@ class Config extends AbstractCommand {
         } else if (!empty($options->getOpt('password'))) {
             $password = $this->cli->promptInput('Please enter a password: ');
             $this->setPassword($password);
+        } else if (!empty($options->getOpt('dbclient'))) {
+            $client = $this->promptForOption('Select your preferred database client:', self::DB_CLIENT_OPTIONS);
+            $this->setDbClient($client);
+        } else if (!empty($options->getOpt('dbclient-mysql'))) {
+            $client = $this->promptForOption('Select your preferred MySQL client:', self::DB_CLIENT_MYSQL_OPTIONS);
+            $this->setDbClientMysql($client);
+        } else if (!empty($options->getOpt('dbclient-pgsql'))) {
+            $client = $this->promptForOption('Select your preferred PostgreSQL client:', self::DB_CLIENT_PGSQL_OPTIONS);
+            $this->setDbClientPgsql($client);
         } else {
             $this->cli->error('Invalid config option');
         }
+    }
+    private function promptForOption(string $prompt, array $options): string {
+        $this->cli->info($prompt, []);
+        foreach ($options as $index => $option) {
+            $this->cli->info(sprintf("%d) %s", $index + 1, $option), []);
+        }
+        while (true) {
+            $input = $this->cli->promptInput("Enter number (1-" . count($options) . "): ");
+            $selection = intval($input);
+            if ($selection > 0 && $selection <= count($options)) {
+                return $options[$selection - 1];
+            }
+            $this->cli->error("Invalid selection. Please try again.");
+        }
+    }
+    private function setDbClient(string $client) {
+        $this->configuratorService->setMainConfigField('dbClient', $client);
+        $this->cli->notice("Default database client has been set.");
+    }
+    private function setDbClientMysql(string $client) {
+        if (!in_array($client, self::DB_CLIENT_MYSQL_OPTIONS)) {
+            throw new \InvalidArgumentException("Invalid MySQL client option");
+        }
+        $this->configuratorService->setMainConfigField('dbClientMysql', $client);
+        $this->cli->notice("Default MySQL client has been set.");
+    }
+    private function setDbClientPgsql(string $client) {
+        if (!in_array($client, self::DB_CLIENT_PGSQL_OPTIONS)) {
+            throw new \InvalidArgumentException("Invalid PostgreSQL client option");
+        }
+        $this->configuratorService->setMainConfigField('dbClientPgsql', $client);
+        $this->cli->notice("Default PostgreSQL client has been set.");
     }
 
     public function register(Options $options): void {
@@ -81,5 +137,8 @@ class Config extends AbstractCommand {
         $options->registerOption('lang', 'Set a default language code', 'l', true, self::COMMAND_NAME);
         $options->registerOption('password', 'Set a default admin password', 'a', false, self::COMMAND_NAME);
         $options->registerOption('proxy', 'Proxy all sites so that they run on 80', 'p', false, self::COMMAND_NAME);
+        $options->registerOption('dbclient', 'Set the default database client', null, false, self::COMMAND_NAME);
+        $options->registerOption('dbclient-mysql', 'Set the default MySQL client', null, false, self::COMMAND_NAME);
+        $options->registerOption('dbclient-pgsql', 'Set the default PostgreSQL client', null, false, self::COMMAND_NAME);
     }
 }

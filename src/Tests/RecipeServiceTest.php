@@ -1,12 +1,13 @@
-<?php declare(strict_types=1);
+<?php
+
+namespace App\Tests;
 
 use App\Model\Recipe;
-use App\Service\RecipeParser;
-use PHPUnit\Framework\TestCase;
+use App\Service\RecipeService;
 use splitbrain\phpcli\Exception;
 
-final class RecipeParserServiceTest extends TestCase {
-    
+final class RecipeServiceTest extends MchefTestCase {
+
     private $validJson = '
     {
       "name": "example",
@@ -25,8 +26,8 @@ final class RecipeParserServiceTest extends TestCase {
         $filePath = tempnam(sys_get_temp_dir(), 'recipe_');
         file_put_contents($filePath, $this->validJson);
 
-        $recipeParser = RecipeParser::instance();
-        $recipe = $recipeParser->parse($filePath);
+        $RecipeService = RecipeService::instance();
+        $recipe = $RecipeService->parse($filePath);
 
         $this->assertInstanceOf(Recipe::class, $recipe);
         $this->assertEquals('v4.1.0', $recipe->moodleTag);
@@ -42,22 +43,22 @@ final class RecipeParserServiceTest extends TestCase {
         $filePath = tempnam(sys_get_temp_dir(), 'recipe_');
         file_put_contents($filePath, 'invalid json');
 
-        $recipeParser = RecipeParser::instance();
+        $RecipeService = RecipeService::instance();
 
         $this->expectException(Exception::class);
         $this->expectExceptionMessage('Failed to decode recipe JSON');
-        $recipeParser->parse($filePath);
+        $RecipeService->parse($filePath);
 
         unlink($filePath);
     }
 
     public function testParseMissingFile(): void {
         $filePath = '/path/to/nonexistent/recipe.json';
-        $recipeParser = RecipeParser::instance();
+        $RecipeService = RecipeService::instance();
 
         $this->expectException(Exception::class);
         $this->expectExceptionMessage('Recipe file does not exist');
-        $recipeParser->parse($filePath);
+        $RecipeService->parse($filePath);
     }
 
     public function testParseMissingRequiredProperty(): void {
@@ -66,15 +67,15 @@ final class RecipeParserServiceTest extends TestCase {
           "name": "example",
           "phpVersion": "8.0"
         }';
-        
+
         $filePath = tempnam(sys_get_temp_dir(), 'recipe_');
         file_put_contents($filePath, $invalidJson);
 
-        $recipeParser = RecipeParser::instance();
+        $RecipeService = RecipeService::instance();
 
         $this->expectException(Exception::class);
         $this->expectExceptionMessage('Failed to decode recipe JSON');
-        $recipeParser->parse($filePath);
+        $RecipeService->parse($filePath);
 
         unlink($filePath);
     }
@@ -86,22 +87,22 @@ final class RecipeParserServiceTest extends TestCase {
     //      "moodleTag": "v4.1.0",
     //      "phpVersion": "7.0"
     //    }';
-    //    
+    //
     //    $filePath = tempnam(sys_get_temp_dir(), 'recipe_');
     //    file_put_contents($filePath, $invalidJson);
 //
-    //    $recipeParser = RecipeParser::instance();
+    //    $RecipeService = RecipeService::instance();
 //
     //    $this->expectException(Exception::class);
     //    $this->expectExceptionMessage('Unsupported php version');
-    //    $recipeParser->parse($filePath);
+    //    $RecipeService->parse($filePath);
 //
     //    unlink($filePath);
     //}
 
     public function testSetDefaults(): void {
-        $recipeParser = RecipeParser::instance();
-        
+        $RecipeService = RecipeService::instance();
+
         $json = '
         {
           "name": "example",
@@ -110,11 +111,11 @@ final class RecipeParserServiceTest extends TestCase {
           "host": "moodle-image-opt.test",
           "includeBehat": true
         }';
-        
+
         $filePath = tempnam(sys_get_temp_dir(), 'recipe_');
         file_put_contents($filePath, $json);
 
-        $recipe = $recipeParser->parse($filePath);
+        $recipe = $RecipeService->parse($filePath);
 
         $this->assertEquals('http://moodle-image-opt.test', $recipe->wwwRoot);
         $this->assertEquals('moodle-image-opt.test.behat', $recipe->behatHost);

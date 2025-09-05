@@ -1,4 +1,7 @@
-<?php declare(strict_types=1);
+<?php
+
+namespace App\Tests;
+
 use PHPUnit\Framework\TestCase;
 
 use App\Enums\TYPE;
