@@ -144,15 +144,19 @@ final class ProxyService extends AbstractService {
                 $config .= "    server host.docker.internal:{$instance->proxyModePort};\n";
                 $config .= "}\n\n";
 
-                $behatHost = $this->recipe->getBehatHost($recipe);
+                $behatHost = $this->recipeService->getBehatHost($recipe);
                 $serverName = $recipe->host;
                 if ($behatHost) {
                     $serverName .= ' '.$behatHost;
                 }
 
+                // Get upload size from recipe, default to 128M
+                $uploadSize = $recipe->maxUploadSize ? $recipe->maxUploadSize . 'M' : '128M';
+
                 $config .= "server {\n";
                 $config .= "    listen 80;\n";
-                $config .= "    server_name {$serverName};\n\n";
+                $config .= "    server_name {$serverName};\n";
+                $config .= "    client_max_body_size {$uploadSize};\n\n";
                 $config .= "    location / {\n";
                 $config .= "        proxy_pass http://{$instance->containerPrefix}_backend;\n";
                 $config .= "        proxy_set_header Host \$host;\n";

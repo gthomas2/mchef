@@ -13,22 +13,20 @@ use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Options;
 
-final class Database extends AbstractCommand {
+class Database extends AbstractCommand {
 
     use SingletonTrait;
     use ExecTrait;
 
     // Service dependencies.
     private Main $mainService;
-    private Docker $dockerService;
 
-    // Models.
+    // Other properties.
     private RegistryInstance $instance;
     private Recipe $recipe;
-
-    // Other
     private DatabaseInterface $database;
 
+    // Constants.
     const COMMAND_NAME = 'database';
 
     final public static function instance(): Database {
@@ -86,6 +84,7 @@ final class Database extends AbstractCommand {
 
         $this->database = $this->resolveDatabase();
         $this->recipe = $this->mainService->getRecipe($this->instance->recipePath);
+        $this->database = $this->resolveDatabase();
 
         if (!empty($options->getOpt('wipe'))) {
             $this->wipeDatabase();

@@ -36,14 +36,13 @@ abstract class AbstractCommand implements SingletonInterface {
         } else {
             $instanceName = $mainService->resolveActiveInstanceName();
         }
+
         if (empty($instanceName)) {
-            throw new RuntimeException(
-                'You must be in a project directory, or select an instance via `mchef use`.'
-            );
+            throw new Exception('Could not resolve instance name. Run from within project directory, or select instance with mchef use');
         }
         $instance = Configurator::instance()->getRegisteredInstance($instanceName);
-        if (!$instance) {
-            throw new RuntimeException('Invalid instance '.$instanceName);
+        if (empty($instance)) {
+            throw new Exception ('Invalid instance '.$instanceName);
         }
         return $instance;
     }
