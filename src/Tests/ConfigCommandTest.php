@@ -24,8 +24,8 @@ class ConfigCommandTest extends MchefTestCase {
             ->disableOriginalConstructor()
             ->onlyMethods(['setMainConfigField'])
             ->getMock();
-        
-        $this->configCommand = Config::instance();
+
+        $this->configCommand = Config::instance(true);
         $this->applyMockedServices(['configuratorService' => $this->configurator], $this->configCommand);
 
         // Create options mock with more specific mocking
@@ -35,13 +35,7 @@ class ConfigCommandTest extends MchefTestCase {
             ->getMock();
     }
 
-    public function testSetDbClient(): void {
-        // Mock user input to select 'dbeaver' (option 1)
-        $this->cli->expects($this->once())
-            ->method('promptInput')
-            ->with("Enter number (1-5): ")
-            ->willReturn('1');
-
+    public function testSetDbClientIsDBeaver(): void {
         // Mock the options with return map
         $this->options->method('getOpt')
             ->willReturnCallback(function($opt) {
@@ -56,22 +50,16 @@ class ConfigCommandTest extends MchefTestCase {
                 };
             });
 
+        // Mock user input to select 'dbeaver'
+        $this->cli->expects($this->once())
+            ->method('promptForOption')
+            ->with("Select your preferred database client:")
+            ->willReturn('dbeaver');
+
         // Expect configurator call
         $this->configurator->expects($this->once())
             ->method('setMainConfigField')
             ->with('dbClient', 'dbeaver');
-
-        // Expect log messages for menu and confirmation
-        $this->cli->expects($this->exactly(6))
-            ->method('info')
-            ->withConsecutive(
-                ['Select your preferred database client:', []],
-                ['1) dbeaver', []],
-                ['2) pgadmin', []],
-                ['3) mysql workbench', []],
-                ['4) psql (cli)', []],
-                ['5) mysql (cli)', []]
-            );
 
         $this->cli->expects($this->once())
             ->method('notice')
@@ -80,62 +68,13 @@ class ConfigCommandTest extends MchefTestCase {
         $this->configCommand->execute($this->options);
     }
 
-    public function testSetDbClientPgsql(): void {
-        // Mock user input to select 'pgadmin' (option 2)
-        $this->cli->expects($this->once())
-            ->method('promptInput')
-            ->with("Enter number (1-3): ")
-            ->willReturn('2');
-
+    public function testSetDbClientIsPgsql(): void {
         // Mock the options with return map
         $this->options->method('getOpt')
             ->willReturnCallback(function($opt) {
                 return match($opt) {
-                    'dbclient-pgsql' => true,
-                    'dbclient' => false,
+                    'dbclient' => true,
                     'dbclient-mysql' => false,
-                    'lang' => false,
-                    'proxy' => false,
-                    'password' => false,
-                    default => null
-                };
-            });
-
-        // Expect configurator to be called
-        $this->configurator->expects($this->once())
-            ->method('setMainConfigField')
-            ->with('dbClientPgsql', 'pgadmin');
-
-        // Expect log messages for menu and confirmation
-        $this->cli->expects($this->exactly(4))
-            ->method('info')
-            ->withConsecutive(
-                ['Select your preferred PostgreSQL client:', []],
-                ['1) dbeaver', []],
-                ['2) pgadmin', []],
-                ['3) psql (cli)', []]
-            );
-
-        $this->cli->expects($this->once())
-            ->method('notice')
-            ->with('Default PostgreSQL client has been set.', []);
-
-        $this->configCommand->execute($this->options);
-    }
-
-    public function testSetDbClientMysql(): void {
-        // Mock user input to select 'mysql workbench' (option 2) 
-        $this->cli->expects($this->once())
-            ->method('promptInput')
-            ->with("Enter number (1-3): ")
-            ->willReturn('2');
-
-        // Mock the options with return map
-        $this->options->method('getOpt')
-            ->willReturnCallback(function($opt) {
-                return match($opt) {
-                    'dbclient-mysql' => true,
-                    'dbclient' => false,
                     'dbclient-pgsql' => false,
                     'lang' => false,
                     'proxy' => false,
@@ -144,27 +83,53 @@ class ConfigCommandTest extends MchefTestCase {
                 };
             });
 
-        // Expect configurator to be called
+        // Mock user input to select 'dbeaver'
+        $this->cli->expects($this->once())
+            ->method('promptForOption')
+            ->with("Select your preferred database client:")
+            ->willReturn('pgsql');
+
+        // Expect configurator call
         $this->configurator->expects($this->once())
             ->method('setMainConfigField')
-            ->with('dbClientMysql', 'mysql workbench');
-
-        // Expect log messages for menu and confirmation
-        $this->cli->expects($this->exactly(4))
-            ->method('info')
-            ->withConsecutive(
-                ['Select your preferred MySQL client:', []],
-                ['1) dbeaver', []],
-                ['2) mysql workbench', []],
-                ['3) mysql (cli)', []]
-            );
+            ->with('dbClient', 'pgsql');
 
         $this->cli->expects($this->once())
             ->method('notice')
-            ->with('Default MySQL client has been set.', []);
+            ->with('Default database client has been set.', []);
 
         $this->configCommand->execute($this->options);
     }
+
+    public function testSetDbClientIsMysql(): void {
+        // Mock the options with return map
+        $this->options->method('getOpt')
+            ->willReturnCallback(function($opt) {
+                return match($opt) {
+                    'dbclient' => true,
+                    'dbclient-mysql' => false,
+                    'dbclient-pgsql' => false,
+                    'lang' => false,
+                    'proxy' => false,
+                    'password' => false,
+                    default => null
+                };
+            });
+
+        // Mock user input to select 'dbeaver'
+        $this->cli->expects($this->once())
+            ->method('promptForOption')
+            ->with("Select your preferred database client:")
+            ->willReturn('mysql');
+
+        // Expect configurator call
+        $this->configurator->expects($this->once())
+            ->method('setMainConfigField')
+            ->with('dbClient', 'mysql');
+
+        $this->cli->expects($this->once())
+            ->method('notice')
+            ->with('Default database client has been set.', []);
 
         $this->configCommand->execute($this->options);
     }
@@ -199,63 +164,5 @@ class ConfigCommandTest extends MchefTestCase {
 
         // Try to set 'mysql workbench' as PostgreSQL client (which is invalid)
         $this->callRestricted($this->configCommand, 'setDbClientPgsql', ['mysql workbench']);
-    }
-
-    public function testInvalidOptionNumber(): void {
-        // Set up input sequence: first "99" (invalid), then "1" (valid)
-        $this->cli->expects($this->exactly(2))
-            ->method('promptInput')
-            ->withConsecutive(
-                ["Enter number (1-5): "],
-                ["Enter number (1-5): "]
-            )
-            ->willReturnOnConsecutiveCalls('99', '1');
-
-        // Mock the options
-        $this->options->method('getOpt')
-            ->willReturnCallback(function($opt) {
-                return match($opt) {
-                    'dbclient' => true,
-                    'dbclient-mysql' => false,
-                    'dbclient-pgsql' => false,
-                    'lang' => false,
-                    'proxy' => false,
-                    'password' => false,
-                    default => null
-                };
-            });
-
-        // Expect configurator to be called with the first option
-        $this->configurator->expects($this->once())
-            ->method('setMainConfigField')
-            ->with('dbClient', 'dbeaver');
-
-        // Expect log messages for menu, error, and second menu display
-        $this->cli->expects($this->exactly(11))
-            ->method('info')
-            ->withConsecutive(
-                ['Select your preferred database client:', []],
-                ['1) dbeaver', []],
-                ['2) pgadmin', []],
-                ['3) mysql workbench', []],
-                ['4) psql (cli)', []],
-                ['5) mysql (cli)', []],
-                ['Select your preferred database client:', []],
-                ['1) dbeaver', []],
-                ['2) pgadmin', []],
-                ['3) mysql workbench', []],
-                ['4) psql (cli)', []],
-                ['5) mysql (cli)', []]
-            );
-
-        $this->cli->expects($this->once())
-            ->method('error')
-            ->with('Invalid selection. Please try again.', []);
-
-        $this->cli->expects($this->once())
-            ->method('notice')
-            ->with('Default database client has been set.', []);
-
-        $this->configCommand->execute($this->options);
     }
 }

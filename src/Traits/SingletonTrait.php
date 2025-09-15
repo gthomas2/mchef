@@ -35,10 +35,10 @@ trait SingletonTrait {
         return $classes;
     }
 
-    protected static function setup_singleton(): SingletonInterface {
+    protected static function setup_singleton(bool $reset = false): SingletonInterface {
         static $instances = [];
         $class = get_called_class();
-        if (!empty($instances[$class])) {
+        if (!$reset && !empty($instances[$class])) {
             return $instances[$class];
         }
         $instance = new $class();

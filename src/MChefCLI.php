@@ -149,6 +149,21 @@ class MChefCLI extends CLI {
         return $input === false ? '' : trim($input);
     }
 
+    public function promptForOption(string $prompt, array $options): string {
+        $this->info($prompt, []);
+        foreach ($options as $index => $option) {
+            $this->info(sprintf("%d) %s", $index + 1, $option), []);
+        }
+        while (true) {
+            $input = $this->promptInput("Enter number (1-" . count($options) . "): ");
+            $selection = intval($input);
+            if ($selection > 0 && $selection <= count($options)) {
+                return $options[$selection - 1];
+            }
+            $this->error("Invalid selection. Please try again.");
+        }
+    }
+
     public function debug($message, array $context = array()) {
         if (!$this->verbose) {
             return;

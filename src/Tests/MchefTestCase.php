@@ -9,7 +9,7 @@ use App\StaticVars;
 
 class MchefTestCase extends \PHPUnit\Framework\TestCase {
     protected function setUp(): void {
-        new MChefCLI();
+        parent::setUp();
         StaticVars::$cli = $this->createMock(\App\MChefCLI::class);
     }
 

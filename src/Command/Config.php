@@ -17,8 +17,8 @@ final class Config extends AbstractCommand {
     // Service dependencies
     private Configurator $configuratorService;
 
-    public static function instance(): Config {
-        return self::setup_singleton();
+    public static function instance(bool $reset = false): Config {
+        return self::setup_singleton($reset);
     }
 
     public const DB_CLIENT_OPTIONS = [
@@ -87,36 +87,24 @@ final class Config extends AbstractCommand {
             $password = $this->cli->promptInput('Please enter a password: ');
             $this->setPassword($password);
         } else if (!empty($options->getOpt('dbclient'))) {
-            $client = $this->promptForOption('Select your preferred database client:', self::DB_CLIENT_OPTIONS);
+            $client = $this->cli->promptForOption('Select your preferred database client:', self::DB_CLIENT_OPTIONS);
             $this->setDbClient($client);
         } else if (!empty($options->getOpt('dbclient-mysql'))) {
-            $client = $this->promptForOption('Select your preferred MySQL client:', self::DB_CLIENT_MYSQL_OPTIONS);
+            $client = $this->cli->promptForOption('Select your preferred MySQL client:', self::DB_CLIENT_MYSQL_OPTIONS);
             $this->setDbClientMysql($client);
         } else if (!empty($options->getOpt('dbclient-pgsql'))) {
-            $client = $this->promptForOption('Select your preferred PostgreSQL client:', self::DB_CLIENT_PGSQL_OPTIONS);
+            $client = $this->cli->promptForOption('Select your preferred PostgreSQL client:', self::DB_CLIENT_PGSQL_OPTIONS);
             $this->setDbClientPgsql($client);
         } else {
             $this->cli->error('Invalid config option');
         }
     }
-    private function promptForOption(string $prompt, array $options): string {
-        $this->cli->info($prompt, []);
-        foreach ($options as $index => $option) {
-            $this->cli->info(sprintf("%d) %s", $index + 1, $option), []);
-        }
-        while (true) {
-            $input = $this->cli->promptInput("Enter number (1-" . count($options) . "): ");
-            $selection = intval($input);
-            if ($selection > 0 && $selection <= count($options)) {
-                return $options[$selection - 1];
-            }
-            $this->cli->error("Invalid selection. Please try again.");
-        }
-    }
+
     private function setDbClient(string $client) {
         $this->configuratorService->setMainConfigField('dbClient', $client);
         $this->cli->notice("Default database client has been set.");
     }
+
     private function setDbClientMysql(string $client) {
         if (!in_array($client, self::DB_CLIENT_MYSQL_OPTIONS)) {
             throw new \InvalidArgumentException("Invalid MySQL client option");
@@ -124,6 +112,7 @@ final class Config extends AbstractCommand {
         $this->configuratorService->setMainConfigField('dbClientMysql', $client);
         $this->cli->notice("Default MySQL client has been set.");
     }
+
     private function setDbClientPgsql(string $client) {
         if (!in_array($client, self::DB_CLIENT_PGSQL_OPTIONS)) {
             throw new \InvalidArgumentException("Invalid PostgreSQL client option");
