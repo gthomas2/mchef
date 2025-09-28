@@ -57,4 +57,60 @@ abstract class AbstractCommand implements SingletonInterface {
         $recipe = $mainService->getRecipe(StaticVars::$instance->recipePath);
         StaticVars::$recipe = $recipe;
     }
+
+    protected function getOptionalOptValueFromArgv(string $long, string $short): ?string {
+        global $argv;
+
+        $isOptionToken = static fn(string $s): bool => str_starts_with($s, '-');
+
+        for ($i = 0, $n = count($argv); $i < $n; $i++) {
+            $tok = $argv[$i];
+
+            // --[arg]=value
+            $prefix = "--{$long}=";
+            if (str_starts_with($tok, $prefix)) {
+                $argVal = substr($tok, strlen($prefix));
+                if (trim($argVal) === '') {
+                    return null;
+                }
+                return $argVal;
+            }
+
+            // --[arg] value
+            if ($tok === "--{$long}") {
+                if ($i + 1 < $n && !$isOptionToken($argv[$i + 1])) {
+                    $argVal = $argv[$i + 1];
+                    if (trim($argVal) === '') {
+                        return null;
+                    }
+                    return $argVal;
+                }
+                return null;
+            }
+
+            // -[shortarg]value
+            $shortPrefix = "-{$short}";
+            if (str_starts_with($tok, $shortPrefix) && strlen($tok) > strlen($shortPrefix)) {
+                $argVal = substr($tok, strlen($shortPrefix));
+                if (trim($argVal) === '') {
+                    return null;
+                }
+                return $argVal;
+            }
+
+            // -[shortarg] value
+            if ($tok === "-{$short}") {
+                if ($i + 1 < $n && !$isOptionToken($argv[$i + 1])) {
+                    $argVal = $argv[$i + 1];
+                    if (trim($argVal) === '') {
+                        return null;
+                    }
+                    return $argVal;
+                }
+                return null;
+            }
+        }
+
+        return null;
+    }
 }

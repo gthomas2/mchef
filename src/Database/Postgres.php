@@ -87,4 +87,51 @@ class Postgres extends AbstractDatabase implements DatabaseInterface {
         $cmd = $dbeavercmd . ' -con ' . escapeshellarg($conString);
         return $cmd;
     }
+
+    /**
+     * Return a pgAdmin connection string.
+     * @return string
+     */
+    public function pgAdminConnectionString(): string {
+        if (empty($this->recipe->dbHostPort)) {
+            throw new \Error('The recipe must have dbHostPort specified in order to generate a connection string');
+        }
+
+        // pgAdmin connection via URL scheme
+        $pgAdminCmd = OS::isWindows() ? 'pgAdmin4.exe' : 'open -a "pgAdmin 4"';
+        $connectionUrl = sprintf(
+            'postgresql://%s:%s@localhost:%s/%s',
+            urlencode($this->recipe->dbUser),
+            urlencode($this->recipe->dbPassword),
+            $this->recipe->dbHostPort,
+            urlencode($this->getDbName())
+        );
+
+        return $pgAdminCmd . ' --url=' . escapeshellarg($connectionUrl);
+    }
+
+    /**
+     * Return a psql CLI connection command and environment (PGPASSWORD).
+     * @return array (command / env)
+     */
+    public function psqlConnectionCommand(): array {
+        if (empty($this->recipe->dbHostPort)) {
+            throw new \Error('The recipe must have dbHostPort specified in order to generate a connection string');
+        }
+
+        return [sprintf(
+            'psql -h localhost -p %s -U %s -d %s',
+            intval($this->recipe->dbHostPort ?? 5432),
+            escapeshellarg($this->recipe->dbUser),
+            escapeshellarg($this->getDbName())
+        ), ['PGPASSWORD' => $this->recipe->dbPassword]];
+    }
+
+    public function mysqlWorkbenchConnectionString(): string {
+        throw new \InvalidArgumentException('MySQL Workbench can only be used with MySQL databases');
+    }
+
+    public function mysqlConnectionString(): string {
+        throw new \InvalidArgumentException('mysql CLI can only be used with MySQL databases');
+    }
 }

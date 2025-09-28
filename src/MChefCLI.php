@@ -5,6 +5,7 @@ namespace App;
 use splitbrain\phpcli\CLI;
 use splitbrain\phpcli\Options;
 use App\Helpers\OS;
+use App\Helpers\SplitbrainWrapper;
 
 class MChefCLI extends CLI {
     static $version = '1.0.0';
@@ -28,7 +29,10 @@ class MChefCLI extends CLI {
     public bool $verbose = false;
 
     public function __construct($autocatch = true) {
-        parent::__construct($autocatch);
+        // Suppress splitbrain deprecation warnings during construction
+        SplitbrainWrapper::suppressDeprecationWarnings(function() use ($autocatch) {
+            parent::__construct($autocatch);
+        });
         StaticVars::$cli = $this;
     }
 
@@ -41,7 +45,7 @@ class MChefCLI extends CLI {
         foreach ($files as $file) {
             $class = 'App\\Command\\'.ucfirst(basename($file, '.php'));
             if (class_exists($class)) {
-                $class::instance($this)->register($options);
+                $class::instance()->register($options);
             }
         }
     }
@@ -77,7 +81,7 @@ class MChefCLI extends CLI {
                     throw new \splitbrain\phpcli\Exception('Invalid command! Command not implemented.');
                 }
             }
-            $class::instance($this)->execute($options);
+            $class::instance()->execute($options);
             return;
         }
 

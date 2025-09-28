@@ -6,9 +6,7 @@ use App\MChefCLI;
 use App\Model\Recipe;
 
 abstract class AbstractDatabase implements DatabaseInterface {
-    public function __construct(Recipe $recipe, MChefCLI $cli) {
-        $this->cli = $cli;
-        $this->recipe = $recipe;
+    public function __construct(protected Recipe $recipe, protected MChefCLI $cli) {
     }
 
     public function getDbName(): string {

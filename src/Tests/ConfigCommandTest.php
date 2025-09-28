@@ -4,6 +4,7 @@ namespace App\Tests;
 
 use App\StaticVars;
 use App\Command\Config;
+use App\Helpers\SplitbrainWrapper;
 use App\MChefCLI;
 use App\Service\Configurator;
 use splitbrain\phpcli\Options;
@@ -29,10 +30,12 @@ class ConfigCommandTest extends MchefTestCase {
         $this->applyMockedServices(['configuratorService' => $this->configurator], $this->configCommand);
 
         // Create options mock with more specific mocking
-        $this->options = $this->getMockBuilder(Options::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['getOpt'])
-            ->getMock();
+        $this->options = SplitbrainWrapper::suppressDeprecationWarnings(function() {
+            return $this->getMockBuilder(Options::class)
+                ->disableOriginalConstructor()
+                ->onlyMethods(['getOpt'])
+                ->getMock();
+        });
     }
 
     public function testSetDbClientIsDBeaver(): void {

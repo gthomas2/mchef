@@ -2,6 +2,7 @@
 
 namespace App\Tests;
 
+use App\Helpers\SplitbrainWrapper;
 use App\Helpers\Testing;
 use App\Interfaces\SingletonInterface;
 use App\MChefCLI;
@@ -10,7 +11,9 @@ use App\StaticVars;
 class MchefTestCase extends \PHPUnit\Framework\TestCase {
     protected function setUp(): void {
         parent::setUp();
-        StaticVars::$cli = $this->createMock(\App\MChefCLI::class);
+        SplitbrainWrapper::suppressDeprecationWarnings(function() {
+            StaticVars::$cli = $this->createMock(\App\MChefCLI::class);
+        });
     }
 
     protected function setRestrictedProperty(object $object, string $propertyName, mixed $value): void {
