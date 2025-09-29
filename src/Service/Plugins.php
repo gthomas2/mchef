@@ -347,6 +347,7 @@ class Plugins extends AbstractService {
         }
 
         $instance = $this->configuratorService->getRegisteredInstance($recipe->containerPrefix);
+        $recipePath = $instance->recipePath ?? $recipe->getRecipePath();
 
         if (empty($recipe->plugins)) {
             return null;
@@ -371,7 +372,7 @@ class Plugins extends AbstractService {
                             $pluginPath = $this->getMoodlePluginPath($pluginName);
                             $ds = DIRECTORY_SEPARATOR;
                             // Strip out accidental double dir separators from path.
-                            $targetPath = str_replace("{$ds}{$ds}", $ds, OS::path(dirname($instance->recipePath).$ds.$pluginPath));
+                            $targetPath = str_replace("{$ds}{$ds}", $ds, OS::path(dirname($recipePath).$ds.$pluginPath));
                             if (!file_exists(OS::path($targetPath.'/version.php'))) {
                                 $this->cli->info('Moving plugin from temp folder to ' . $targetPath);
                                 if (!file_exists($targetPath) && !OS::isWindows()) {
