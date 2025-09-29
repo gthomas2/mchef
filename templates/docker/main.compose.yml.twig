@@ -48,6 +48,10 @@ services:
       POSTGRES_USER: *db-user
       POSTGRES_PASSWORD: *db-pass
       POSTGRES_DB: *db-name
+    command:
+      - "postgres"
+      - "-c"
+      - "max_locks_per_transaction=512"
 {% if (dbHostPort) %}
     ports:
       - {{dbHostPort}}:5432

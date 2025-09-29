@@ -28,26 +28,13 @@ class Postgres extends AbstractDatabase implements DatabaseInterface {
             return $dockerService->execute($dbContainer, $cmd, $env);
         };
 
-        // DO block: drop every existing table in public (no grant/privilege churn).
-        $doBlock = <<<'SQL'
-            DO $$
-            DECLARE row RECORD;
-            BEGIN
-              FOR row IN
-                (SELECT tablename FROM pg_tables WHERE schemaname = 'public')
-              LOOP
-                EXECUTE 'DROP TABLE IF EXISTS public.' || quote_ident(row.tablename) || ' CASCADE';
-              END LOOP;
-            END
-            $$;
-        SQL;
-
         try {
-            $psql($doBlock);
+            $psql("DROP SCHEMA public CASCADE; CREATE SCHEMA public;");
             return;
         } catch (ExecFailed) {
             $this->cli->warning('DO block failed; falling back to per-table drops…');
         }
+        die;
 
         // Fallback: enumerate base tables and drop one-by-one (quoted, with CASCADE).
         try {
