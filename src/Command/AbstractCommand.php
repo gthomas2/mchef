@@ -15,6 +15,10 @@ abstract class AbstractCommand implements SingletonInterface {
 
     use SingletonTrait;
 
+    // Service dependencies.
+    protected Main $mainService;
+    protected Configurator $configuratorService;
+
     /**
      * Execute command with options.
      * @param Options $options
@@ -29,18 +33,18 @@ abstract class AbstractCommand implements SingletonInterface {
 
     protected function getInstanceFromOptions(Options $options): RegistryInstance {
         $args = $options->getArgs();
-        $mainService = Main::instance();
+
         // If instance name is provided as argument
         if (!empty($args)) {
             $instanceName = $args[0];
         } else {
-            $instanceName = $mainService->resolveActiveInstanceName();
+            $instanceName = $this->mainService->resolveActiveInstanceName();
         }
 
         if (empty($instanceName)) {
             throw new Exception('Could not resolve instance name. Run from within project directory, or select instance with mchef use');
         }
-        $instance = Configurator::instance()->getRegisteredInstance($instanceName);
+        $instance = $this->configuratorService->getRegisteredInstance($instanceName);
         if (empty($instance)) {
             throw new Exception ('Invalid instance '.$instanceName);
         }
@@ -53,8 +57,7 @@ abstract class AbstractCommand implements SingletonInterface {
         $defaultStr = $instance->isDefault ? 'default ' : '';
         $this->cli->info('-- Using '.$defaultStr.'instance "'.$instance->containerPrefix.'" --');
 
-        $mainService = Main::instance();
-        $recipe = $mainService->getRecipe(StaticVars::$instance->recipePath);
+        $recipe = $this->mainService->getRecipe(StaticVars::$instance->recipePath);
         StaticVars::$recipe = $recipe;
     }
 

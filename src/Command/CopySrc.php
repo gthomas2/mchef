@@ -19,7 +19,6 @@ final class CopySrc extends AbstractCommand {
     use ExecTrait;
 
     // Service dependencies.
-    private Main $mainService;
     private Plugins $pluginsService;
     private Project $projectService;
     private File $fileService;

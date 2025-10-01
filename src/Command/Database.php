@@ -20,10 +20,6 @@ class Database extends AbstractCommand {
     use SingletonTrait;
     use ExecTrait;
 
-    // Service dependencies.
-    private Main $mainService;
-    private Configurator $configuratorService;
-
     // Other properties.
     private RegistryInstance $instance;
     private Recipe $recipe;

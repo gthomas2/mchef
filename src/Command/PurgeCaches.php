@@ -13,9 +13,6 @@ final class PurgeCaches extends AbstractCommand {
     use SingletonTrait;
     use ExecTrait;
 
-    // Service dependencies.
-    private Main $mainService;
-
     // Constants.
     const COMMAND_NAME = 'purgecaches';
 

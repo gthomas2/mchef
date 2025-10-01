@@ -15,7 +15,6 @@ class Up extends AbstractCommand {
     use ExecTrait;
 
     // Service dependencies.
-    private Configurator $configuratorService;
     private ProxyService $proxyService;
 
     // Constants.

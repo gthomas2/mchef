@@ -13,9 +13,6 @@ final class Bash extends AbstractCommand {
     use SingletonTrait;
     use ExecTrait;
 
-    // Service dependencies
-    private Main $mainService;
-
     const COMMAND_NAME = 'bash';
 
     public static function instance(): Bash {

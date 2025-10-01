@@ -16,8 +16,6 @@ final class ListAll extends AbstractCommand {
     use ExecTrait;
 
     // Service Dependencies
-    private Configurator $configuratorService;
-    private Main $mainService;
     private Docker $dockerService;
     private RecipeService $recipeService;
 

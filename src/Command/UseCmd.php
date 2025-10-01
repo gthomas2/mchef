@@ -12,9 +12,6 @@ class UseCmd extends AbstractCommand {
     use SingletonTrait;
     use ExecTrait;
 
-    // Service dependencies.
-    private Configurator $configuratorService;
-
     const COMMAND_NAME = 'use';
 
     final public static function instance(): UseCmd {

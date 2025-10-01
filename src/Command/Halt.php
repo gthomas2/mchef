@@ -16,7 +16,6 @@ final class Halt extends AbstractCommand {
 
     // Service dependencies.
     private Docker $dockerService;
-    private Configurator $configuratorService;
 
     // Constants
     const COMMAND_NAME = 'halt';

@@ -14,9 +14,6 @@ final class Config extends AbstractCommand {
 
     const COMMAND_NAME = 'config';
 
-    // Service dependencies
-    private Configurator $configuratorService;
-
     public static function instance(bool $reset = false): Config {
         return self::setup_singleton($reset);
     }

@@ -18,7 +18,6 @@ final class Behat extends AbstractCommand {
     use ExecTrait;
 
     // Service dependencies.
-    protected Main $mainService;
     protected Plugins $pluginsService;
     protected Docker $dockerService;
 
