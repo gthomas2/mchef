@@ -60,7 +60,7 @@ class DatabaseConnectionStringsTest extends MchefTestCase {
         $mysql = new Mysql($recipe, StaticVars::$cli);
         
         $this->expectException(\InvalidArgumentException::class);
-        $mysql->psqlConnectionString();
+        $mysql->psqlConnectionCommand();
     }
 
     public function testPostgresConnectionStringMethods(): void {
@@ -89,10 +89,12 @@ class DatabaseConnectionStringsTest extends MchefTestCase {
         $this->assertStringContainsString('localhost:5432', $pgAdminCmd);
 
         // Test psql CLI connection string
-        $psqlCmd = $postgres->psqlConnectionString();
-        $this->assertStringContainsString('PGPASSWORD=', $psqlCmd);
-        $this->assertStringContainsString('psql -h localhost', $psqlCmd);
-        $this->assertStringContainsString("-p '5432'", $psqlCmd);
+        $psqlCmd = $postgres->psqlConnectionCommand();
+        $this->assertIsArray($psqlCmd);
+        $this->assertCount(2, $psqlCmd);
+        $this->assertStringContainsString('psql -h localhost', $psqlCmd[0]);
+        $this->assertStringContainsString("-p 5432", $psqlCmd[0]);
+        $this->assertArrayHasKey('PGPASSWORD', $psqlCmd[1]);
 
         // Test MySQL-only methods throw exceptions
         $this->expectException(\InvalidArgumentException::class);

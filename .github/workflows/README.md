@@ -33,8 +33,8 @@ This directory contains automated testing workflows for MChef, ensuring code qua
 
 **Environment**:
 - Ubuntu latest
-- PHP 8.1 with required extensions
-- Docker with BuildKit enabled
+- PHP 8.2 with required extensions
+- Docker with BuildKit enabled (Docker desktop or OrbStack compatible)
 - Composer dependency management with caching
 
 ## Optimization Features

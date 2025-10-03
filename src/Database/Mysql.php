@@ -75,7 +75,7 @@ class Mysql extends AbstractDatabase implements DatabaseInterface {
         throw new \InvalidArgumentException('pgAdmin can only be used with PostgreSQL databases');
     }
 
-    public function psqlConnectionString(): string {
+    public function psqlConnectionCommand(): array {
         throw new \InvalidArgumentException('psql can only be used with PostgreSQL databases');
     }
 
