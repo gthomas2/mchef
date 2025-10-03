@@ -390,7 +390,6 @@ class Plugins extends AbstractService {
                                 $volumeHostPath = $this->dockerService->windowsToDockerPath($targetPath);
                             }
                             $volume = new Volume(...['path' => $pluginPath, 'hostPath' => $volumeHostPath]);
-
                             $volumes[] = $volume;
                             $plugins[$pluginName] = new Plugin(
                                 $pluginName,

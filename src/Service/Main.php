@@ -45,7 +45,12 @@ class Main extends AbstractService {
         return self::setup_singleton();
     }
 
-    public function getChefPath($failOnNotFound = false): ?string {
+    protected function getRecipePath(): ?string {
+        $chefPath = $this->getChefPath(true);
+        return realpath("$chefPath/../");
+    }
+
+    final public function getChefPath($failOnNotFound = false): ?string {
         if ($this->chefPath) {
             return $this->chefPath;
         }
@@ -122,7 +127,7 @@ class Main extends AbstractService {
         file_put_contents($ymlPath, $dockerComposeFileContents);
 
         // Compose the command
-        $cmd = "docker compose -f \"$ymlPath\" up -d --force-recreate --build";
+        $cmd = "docker compose --project-directory \"{$this->getChefPath()}/docker\" -f \"$ymlPath\" up -d --force-recreate --build";
         $this->execPassthru($cmd, "Error starting docker containers - try pruning with 'docker builder prune' OR 'docker system prune' (note 'docker system prune' will destroy all non running container images)");
 
         // @Todo - Add code here to check docker ps for expected running containers.

@@ -120,8 +120,6 @@ class Database extends AbstractCommand {
             exit(1);
         }
         $this->instance = StaticVars::$instance;
-
-        $this->database = $this->resolveDatabase();
         $this->recipe = $this->mainService->getRecipe($this->instance->recipePath);
         $this->database = $this->resolveDatabase();
 

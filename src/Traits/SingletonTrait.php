@@ -16,6 +16,11 @@ trait SingletonTrait {
         $this->cli = StaticVars::$cli;
     }
 
+    protected function init() {
+        // Do nothing by default.
+        // Override this in your class if you want something to happen automatically when the class is instantiated.
+    }
+
     protected static function getServiceClassesFromClassProperties(): array {
         $reflection = new \ReflectionClass(static::class);
         $properties = $reflection->getProperties();
@@ -47,6 +52,9 @@ trait SingletonTrait {
         // Note - this has to happen after the instance has been registered, or you will
         // get circular dependency issues.
         static::dependecyInjection($instance);
+        
+        $instance->init();
+
         return $instance;
     }
 
