@@ -164,7 +164,10 @@ else
   "moodleTag": "v4.1.0",
   "phpVersion": "8.0",
   "plugins": [
-    "https://github.com/marcusgreen/moodle-qtype_gapfill.git"
+    {
+      "repo": "https://github.com/marcusgreen/moodle-qtype_gapfill.git",
+      "branch": "master"
+    }
   ],
   "containerPrefix": "$CONTAINER_PREFIX",
   "host": "$CONTAINER_PREFIX.localhost",

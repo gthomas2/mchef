@@ -49,8 +49,14 @@ class Recipe extends AbstractModel {
 
         /**
          * @var bool - if true, clone repository plugins to cwd/plugins
+         * @deprecated Use mountPlugins instead
          */
-        public bool $cloneRepoPlugins = false,
+        public ?bool $cloneRepoPlugins = null,
+
+        /**
+         * @var bool - if true, use volume mounts for plugins (facilitates local development)
+         */
+        public ?bool $mountPlugins = null,
 
         /**
          * @var string - web host (leave blank for default of localhost).

@@ -3,8 +3,14 @@
   "moodleTag": "v4.1.0",
   "phpVersion": "8.0",
   "plugins": [
-    "https://github.com/marcusgreen/moodle-qtype_gapfill.git",
-    "https://github.com/gthomas2/moodle-filter_imageopt",
+    {
+      "repo": "https://github.com/marcusgreen/moodle-qtype_gapfill.git",
+      "branch": "master"
+    },
+    {
+      "repo": "https://github.com/gthomas2/moodle-filter_imageopt",
+      "branch": "master"
+    },
     {
       "repo": "https://github.com/gthomas2/moodle-theme_snap.git",
       "upstream": "https://github.com/open-lms-open-source/moodle-theme_snap.git",
@@ -17,5 +23,5 @@
   "updateHostHosts": true,
   "dbType": "pgsql",
   "developer": true,
-  "cloneRepoPlugins": true
+  "mountPlugins": true
 }

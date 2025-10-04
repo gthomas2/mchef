@@ -43,7 +43,8 @@ final class ModelJSONDeserializerTest extends MchefTestCase {
         $this->assertEquals('8.0', $recipe->phpVersion);
         $this->assertNull($recipe->name);
         $this->assertNull($recipe->plugins);
-        $this->assertFalse($recipe->cloneRepoPlugins);
+        $this->assertNull($recipe->cloneRepoPlugins); // Deprecated field.
+        $this->assertNull($recipe->mountPlugins);
         $this->assertEquals('pgsql', $recipe->dbType);
     }
 

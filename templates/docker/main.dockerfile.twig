@@ -84,6 +84,14 @@ RUN \
 # Install Moodle.
 RUN rm -rf $MOODLE_PATH/*
 RUN git clone https://github.com/moodle/moodle.git --branch $MOODLE_TAG --depth 1 $MOODLE_PATH
+
+# Clone plugins using shallow clones
+{% if pluginsForDocker %}
+{% for plugin in pluginsForDocker %}
+RUN git clone {{ plugin.repo }} --branch {{ plugin.branch }} --depth 1 $MOODLE_PATH{{ plugin.path }}
+{% endfor %}
+{% endif %}
+
 COPY assets/config.php $MOODLE_PATH/config.php
 
 {% if (includeBehat or developer) %}
@@ -100,9 +108,6 @@ RUN rm /tmp/install-xdebug.sh
 {%  endif %}
 
 VOLUME $MOODLE_DATA
-{% for volume in volumes %}
-VOLUME $MOODLE_PATH{{ volume.path }}
-{% endfor %}
 
 # Create behat data dir.
 {% if (includeBehat) %}

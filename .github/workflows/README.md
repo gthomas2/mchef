@@ -69,7 +69,10 @@ The workflow uses an optimized test recipe designed for CI efficiency:
   "moodleTag": "v4.1.0",
   "phpVersion": "8.0",
   "plugins": [
-    "https://github.com/marcusgreen/moodle-qtype_gapfill.git"
+    {
+      "repo": "https://github.com/marcusgreen/moodle-qtype_gapfill.git",
+      "branch": "master"
+    }
   ],
   "containerPrefix": "ci-test",
   "host": "ci-test.localhost",
@@ -160,7 +163,12 @@ The local script provides the same functionality as the GitHub workflow with add
   "name": "ci-test",
   "moodleTag": "v4.1.0", 
   "phpVersion": "8.0",
-  "plugins": ["https://github.com/marcusgreen/moodle-qtype_gapfill.git"],
+  "plugins": [
+    {
+      "repo": "https://github.com/marcusgreen/moodle-qtype_gapfill.git",
+      "branch": "master"
+    }
+  ],
   "containerPrefix": "ci-test",
   "host": "ci-test.localhost",
   "port": 8080,

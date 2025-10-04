@@ -8,6 +8,13 @@ on:
       - 'LICENSE'
       - 'docs/**'
       - '.gitignore'
+  push:
+    branches: [ main, master, develop ]
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE' 
+      - 'docs/**'
+      - '.gitignore'
   workflow_dispatch: # Allow manual triggering
 
 env:
@@ -16,6 +23,7 @@ env:
 
 jobs:
   unit-tests:
+    name: Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -54,6 +62,7 @@ jobs:
         php mchef.php --version || echo "No version flag available"
 
   integration-test:
+    name: Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: unit-tests
@@ -89,7 +98,10 @@ jobs:
           "moodleTag": "v4.1.0",
           "phpVersion": "8.0",
           "plugins": [
-            "https://github.com/marcusgreen/moodle-qtype_gapfill.git"
+            {
+              "repo": "https://github.com/marcusgreen/moodle-qtype_gapfill.git",
+              "branch": "master"
+            }
           ],
           "containerPrefix": "ci-test",
           "host": "ci-test.localhost",
@@ -97,7 +109,7 @@ jobs:
           "updateHostHosts": false,
           "dbType": "pgsql",
           "developer": true,
-          "cloneRepoPlugins": false
+          "usePluginVolumeMounts": false
         }
         EOF
         echo "Created test recipe:"
@@ -230,3 +242,28 @@ jobs:
         echo "✅ Container creation and management"
         echo "✅ Core commands tested (list, use, up, halt)"
         echo "✅ Container lifecycle verified"
+
+  # Required status check job that all other jobs depend on
+  all-tests-passed:
+    name: All Tests Passed
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-test]
+    if: always()
+    
+    steps:
+    - name: Check test results
+      run: |
+        echo "Unit tests status: ${{ needs.unit-tests.result }}"
+        echo "Integration tests status: ${{ needs.integration-test.result }}"
+        
+        if [[ "${{ needs.unit-tests.result }}" != "success" ]]; then
+          echo "❌ Unit tests failed"
+          exit 1
+        fi
+        
+        if [[ "${{ needs.integration-test.result }}" != "success" ]]; then
+          echo "❌ Integration tests failed" 
+          exit 1
+        fi
+        
+        echo "✅ All tests passed successfully!"
