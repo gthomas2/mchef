@@ -220,8 +220,24 @@ class MChefCLI extends CLI {
             $instance = $configurator->getMainConfig()->instance;
             $configurator->setMainConfigField('instance', null);
             $this->main->up($recipe);
-            // Restore instance.
-            $configurator->setMainConfigField('instance', $instance);
+            
+            // Get the recipe to find the container prefix (new instance name)
+            $recipeObj = $this->main->getRecipe();
+            $newInstanceName = $recipeObj->containerPrefix;
+            
+            // Prompt user if they want to set this as the active instance
+            $setAsActive = $this->promptYesNo("Do you want to set '$newInstanceName' as the active instance?", null, null, 'y');
+            
+            if ($setAsActive) {
+                $configurator->setMainConfigField('instance', $newInstanceName);
+                $this->success("Set '$newInstanceName' as the active instance.");
+            } else {
+                // Restore the previous instance
+                $configurator->setMainConfigField('instance', $instance);
+                if ($instance) {
+                    $this->info("Restored previous active instance: '$instance'");
+                }
+            }
             return;
         }
 
