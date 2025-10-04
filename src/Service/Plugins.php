@@ -338,6 +338,15 @@ class Plugins extends AbstractService {
      * @return PluginsInfo|null
      */
     public function getPluginsInfoFromRecipe(Recipe $recipe): ?PluginsInfo {
+        // Show deprecation warning for cloneRepoPlugins
+        if ($recipe->cloneRepoPlugins !== null) {
+            $this->cli->warning('RECIPE WARNING: cloneRepoPlugins is deprecated. Use mountPlugins instead.');
+            // For backward compatibility, set
+            if ($recipe->mountPlugins === null) {
+                $recipe->mountPlugins = $recipe->cloneRepoPlugins;
+            }
+        }
+
         $mcPluginsInfo = $this->loadMchefPluginsInfo();
         if ($mcPluginsInfo && $this->checkPluginsInfoInSync($recipe, $mcPluginsInfo)) {
             // @TODO - we need a cli argument to prevent caching - e.g. --no-cache
@@ -360,7 +369,7 @@ class Plugins extends AbstractService {
 
             // Only support single github hosted plugins for now.
             if (strpos($recipePlugin->repo, 'https://github.com') === 0 || strpos($recipePlugin->repo, 'git@github.com') === 0) {
-                if ($recipe->cloneRepoPlugins) {
+                if ($recipe->mountPlugins) {
                     $tmpDir = sys_get_temp_dir().'/'.uniqid('', true);
 
                     $this->cloneGithubRepository($recipePlugin->repo, $recipePlugin->branch, $tmpDir, $recipePlugin->upstream);
@@ -406,6 +415,36 @@ class Plugins extends AbstractService {
 
                         throw new Exception('Unhandled case');
                     }
+                } else {
+                    // Even without volume mounts, we need to get plugin info for Docker cloning
+                    $tmpDir = sys_get_temp_dir().'/'.uniqid('', true);
+                    
+                    $this->cloneGithubRepository($recipePlugin->repo, $recipePlugin->branch, $tmpDir, $recipePlugin->upstream);
+                    $versionFiles = $this->findMoodleVersionFiles($tmpDir);
+                    if (count($versionFiles) === 1) {
+                        if (file_exists(OS::path($tmpDir.'/version.php'))) {
+                            $pluginName = $this->getPluginComponentFromVersionFile($tmpDir.'/version.php');
+                            $pluginPath = $this->getMoodlePluginPath($pluginName);
+                            
+                            // Create dummy volume for plugin entry (won't be used for mounting)
+                            $dummyVolume = new Volume(...['path' => $pluginPath, 'hostPath' => '']);
+                            
+                            // Create plugin entry without volume for Docker shallow clone
+                            $plugins[$pluginName] = new Plugin(
+                                $pluginName,
+                                $pluginPath,
+                                '', // No local target path since no volume mount
+                                $dummyVolume,
+                                $plugin
+                            );
+                        }
+                    } else {
+                        $this->cli->info('The Moodle plugin version information is not found in the repo.');
+                        throw new Exception('Unhandled case');
+                    }
+                    
+                    // Clean up temp directory
+                    $this->fileService->deleteDir($tmpDir);
                 }
             }
         }
@@ -525,7 +564,7 @@ class Plugins extends AbstractService {
      *
      * @return RecipePlugin
      */
-    private function extractRepoInfoFromPlugin(mixed $plugin): RecipePlugin {
+    public function extractRepoInfoFromPlugin(mixed $plugin): RecipePlugin {
         if (is_object($plugin) && empty($plugin->repo)) {
             throw new Exception('Repo not set in plugin recipe');
         }

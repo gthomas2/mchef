@@ -122,6 +122,26 @@ class Main extends AbstractService {
         // Always set hostPort to the correct value (proxy or non-proxy)
         $dockerData->hostPort = $this->getHostPort();
 
+        // Remove plugin volumes (could be cached in plugins) if recipe does not want them.
+        if (empty($this->recipe->mountPlugins)) {
+            $plugins = $this->pluginsService->getPluginsInfoFromRecipe($this->recipe);
+            
+            $pluginPaths = [];
+            foreach ($plugins->volumes as $pluginVolume) {
+                $path = $pluginVolume->path;
+                $pluginPaths[] = $path;
+            }
+            
+            $volumes = array_filter(
+                $dockerData->volumes,
+                function($vol) use($pluginPaths) {
+                    return !in_array($vol->path, $pluginPaths);
+                }
+            );
+
+            $dockerData->volumes = $volumes;
+        }
+
         // Re-render the compose file with the correct hostPort
         $dockerComposeFileContents = $this->twig->render('@docker/main.compose.yml.twig', (array) $dockerData);
         file_put_contents($ymlPath, $dockerComposeFileContents);
@@ -489,6 +509,47 @@ class Main extends AbstractService {
 
         $dockerData = new DockerData($volumes, null, ...(array) $recipe);
         $dockerData->volumes = $volumes;
+        
+        // Add plugin data for dockerfile shallow cloning
+        if ($recipe->plugins) {
+            $pluginsForDocker = [];
+            foreach ($recipe->plugins as $plugin) {
+                $recipePlugin = $this->pluginsService->extractRepoInfoFromPlugin($plugin);
+                
+                // Only include GitHub repositories for cloning
+                if (strpos($recipePlugin->repo, 'https://github.com') === 0 || strpos($recipePlugin->repo, 'git@github.com') === 0) {
+                    // Find plugin info to get the Moodle path
+                    if ($this->pluginInfo && isset($this->pluginInfo->plugins)) {
+                        foreach ($this->pluginInfo->plugins as $pluginInfo) {
+                            if (is_string($pluginInfo->recipeSrc)) {
+                                if ($pluginInfo->recipeSrc !== $recipePlugin->repo) {
+                                    continue;
+                                }
+                                $repo = $pluginInfo->recipeSrc;
+                                $branch = 'main'; // Default branch if not specified
+                            } elseif (is_object($pluginInfo->recipeSrc)) {
+                                if ($pluginInfo->recipeSrc->repo !== $recipePlugin->repo) {
+                                    continue;
+                                }
+                                $repo = $pluginInfo->recipeSrc->repo;
+                                $branch = $pluginInfo->recipeSrc->branch;
+                            }
+
+                            $path = $pluginInfo->path;
+
+                            $pluginsForDocker[] = [
+                                'repo' => $repo,
+                                'branch' => $branch,
+                                'path' => $path
+                            ];
+                            break;
+                        }
+                    }
+                }
+            }
+            $dockerData->pluginsForDocker = $pluginsForDocker;
+        }
+        
         $this->dockerData = $dockerData;
 
         if ($recipe->updateHostHosts) {
