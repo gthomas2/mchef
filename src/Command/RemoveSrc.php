@@ -41,7 +41,7 @@ class RemoveSrc extends AbstractCommand {
         $this->projectService->purgeProjectFolderOfNonPluginCode($instanceName);
     }
 
-    public function register(Options $options): void {
+   protected function register(Options $options): void {
         $options->registerCommand(self::COMMAND_NAME, 'Remove Moodle source from project folder');
     }
 }

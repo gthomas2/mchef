@@ -145,7 +145,7 @@ class Configurator extends AbstractService {
         $this->writeInstanceRegistry($instances);
     }
 
-    public function registerInstance(string $instanceRecipePath, ?string $uuid, string $containerPrefix): string {
+   public function registerInstance(string $instanceRecipePath, ?string $uuid, string $containerPrefix): string {
         $uuid = $uuid ?? uniqid();
         $this->upsertRegistryInstance($uuid, $instanceRecipePath, $containerPrefix);
         // We need to now put the uuid into the .mchef folder corresponding to the recipe.
@@ -154,7 +154,7 @@ class Configurator extends AbstractService {
         return $uuid;
     }
 
-    public function getMainConfig() {
+    public function getMainConfig(): GlobalConfig {
         $configPath = $this->mainConfigPath();
         if (!file_exists($configPath)) {
             return new GlobalConfig();

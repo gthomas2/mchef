@@ -45,7 +45,7 @@ class UseCmd extends AbstractCommand {
         $this->setInstance($arg);
     }
 
-    public function register(Options $options): void {
+   protected function register(Options $options): void {
         $options->registerCommand(self::COMMAND_NAME, 'Select the mchef instance you would like to use - name must be registered. Call mchef list to see list of registered instances.');
     }
 }

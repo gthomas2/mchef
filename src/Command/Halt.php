@@ -100,7 +100,7 @@ final class Halt extends AbstractCommand {
         }
     }
 
-    public function register(Options $options): void {
+   protected function register(Options $options): void {
         $options->registerCommand(self::COMMAND_NAME, 'Stop docker containers for a project or by container prefix');
         $options->registerArgument('instance', 'Instance name to stop (optional if instance selected, or run from project directory).', false, self::COMMAND_NAME);
     }

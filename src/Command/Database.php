@@ -5,11 +5,8 @@ namespace App\Command;
 use App\Database\DatabaseInterface;
 use App\Database\Mysql;
 use App\Database\Postgres;
-use App\Helpers\OS;
 use App\Model\Recipe;
 use App\Model\RegistryInstance;
-use App\Service\Configurator;
-use App\Service\Main;
 use App\StaticVars;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
@@ -23,7 +20,7 @@ class Database extends AbstractCommand {
     // Other properties.
     private RegistryInstance $instance;
     private Recipe $recipe;
-    private DatabaseInterface $database;
+    private Mysql | Postgres $database;
 
     // Constants.
     const COMMAND_NAME = 'database';
@@ -174,7 +171,7 @@ class Database extends AbstractCommand {
         return null;
     }
 
-    public function register(Options $options): void {
+   protected function register(Options $options): void {
         $options->registerCommand(self::COMMAND_NAME, 'Database utilities');
         $options->registerOption('exec', 'Exec onto database', 'e', false, self::COMMAND_NAME);
         $options->registerOption('wipe', 'Wipe database', 'w', false, self::COMMAND_NAME);

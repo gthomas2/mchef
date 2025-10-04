@@ -9,6 +9,7 @@ use App\Service\Main;
 use App\Service\Docker;
 use App\Service\RecipeService;
 use App\Model\RegistryInstance;
+use App\Model\GlobalConfig;
 use App\MChefCLI;
 use splitbrain\phpcli\Options;
 
@@ -28,7 +29,9 @@ class ListAllCommandTest extends MchefTestCase {
         $instances = [$instance1, $instance2];
 
         $configurator->method('getInstanceRegistry')->willReturn($instances);
-        $configurator->method('getMainConfig')->willReturn((object)['instance' => 'prefix2']);
+        $globalConfig = new GlobalConfig();
+        $globalConfig->instance = 'prefix2';
+        $configurator->method('getMainConfig')->willReturn($globalConfig);
         $main->method('getDockerMoodleContainerName')->willReturn('prefix1-moodle', 'prefix2-moodle');
         $docker->method('checkContainerRunning')->willReturn(true, false);
 
@@ -66,7 +69,9 @@ class ListAllCommandTest extends MchefTestCase {
 
         $instance = new RegistryInstance('uuid1', '/missing/recipe.json', 'prefix1', null);
         $configurator->method('getInstanceRegistry')->willReturn([$instance]);
-        $configurator->method('getMainConfig')->willReturn((object)['instance' => 'prefix1']);
+        $globalConfig = new GlobalConfig();
+        $globalConfig->instance = 'prefix1';
+        $configurator->method('getMainConfig')->willReturn($globalConfig);
         $main->method('getDockerMoodleContainerName')->willReturn('prefix1-moodle');
         $docker->method('checkContainerRunning')->willReturn(false);
 
@@ -97,7 +102,9 @@ class ListAllCommandTest extends MchefTestCase {
         $docker = $this->createMock(Docker::class);
         $options = $this->createMock(Options::class);
         $configurator->method('getInstanceRegistry')->willReturn([]);
-        $configurator->method('getMainConfig')->willReturn((object)['instance' => null]);
+        $globalConfig = new GlobalConfig();
+        $globalConfig->instance = null;
+        $configurator->method('getMainConfig')->willReturn($globalConfig);
         $recipeService = $this->createMock(RecipeService::class);
         $listAll = ListAll::instance();
         $this->applyMockedServices([
@@ -123,7 +130,9 @@ class ListAllCommandTest extends MchefTestCase {
         $instance2 = new RegistryInstance('uuid2', '/path/to/recipe2.json', 'prefix2', null);
         $instances = [$instance1, $instance2];
         $configurator->method('getInstanceRegistry')->willReturn($instances);
-        $configurator->method('getMainConfig')->willReturn((object)['instance' => null]);
+        $globalConfig = new GlobalConfig();
+        $globalConfig->instance = null;
+        $configurator->method('getMainConfig')->willReturn($globalConfig);
         $main->method('getDockerMoodleContainerName')->willReturn('prefix1-moodle', 'prefix2-moodle');
         $docker->method('checkContainerRunning')->willReturn(false, false);
         $recipeService = $this->createMock(RecipeService::class);
@@ -153,7 +162,9 @@ class ListAllCommandTest extends MchefTestCase {
         $options = $this->createMock(Options::class);
         $instance1 = new RegistryInstance('uuid1', '/path/to/recipe1.json', 'prefix1', null);
         $configurator->method('getInstanceRegistry')->willReturn([$instance1]);
-        $configurator->method('getMainConfig')->willReturn((object)['instance' => 'prefix1']);
+        $globalConfig = new GlobalConfig();
+        $globalConfig->instance = 'prefix1';
+        $configurator->method('getMainConfig')->willReturn($globalConfig);
         $main->method('getDockerMoodleContainerName')->willReturn('prefix1-moodle');
         $docker->method('checkContainerRunning')->willReturn(false);
         $recipeService = $this->createMock(RecipeService::class);

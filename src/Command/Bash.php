@@ -28,7 +28,7 @@ final class Bash extends AbstractCommand {
         $this->execPassthru($cmd);
     }
 
-    public function register(Options $options): void {
+   protected function register(Options $options): void {
         $options->registerCommand(self::COMMAND_NAME, 'Establish a bash shell on the moodle container');
         $options->registerArgument('instance', 'Instance name for Moodle bash shell (optional if instance selected, or run from project directory).', false, self::COMMAND_NAME);
     }

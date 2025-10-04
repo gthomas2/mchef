@@ -86,7 +86,7 @@ final class PHPUnit extends AbstractCommand {
         $this->execPassthru($cmd, 'Tests failed');
     }
 
-    public function register(Options $options): void {
+   protected function register(Options $options): void {
         $options->registerCommand(self::COMMAND_NAME, 'Allows phpunit tests to be run against plugins defined in the recipe file.');
         $options->registerOption('plugins',
             'Plugin frankenstyle names to run phpunit tests against. Leave this argument empty for all plugins. For multiple plugins, separate using a comma.',

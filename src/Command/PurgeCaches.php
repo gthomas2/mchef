@@ -30,7 +30,7 @@ final class PurgeCaches extends AbstractCommand {
         $this->cli->success('Caches successfully purged for '.$instanceName);
     }
 
-    public function register(Options $options): void {
+   protected function register(Options $options): void {
         $options->registerCommand(self::COMMAND_NAME, 'Purge moodle caches');
         $options->registerArgument('prefix', 'Mchef instance name to purge caches (optional if run from project directory)', false, self::COMMAND_NAME);
     }

@@ -130,7 +130,7 @@ class Up extends AbstractCommand {
         }
     }
 
-    public function register(Options $options): void {
+   protected function register(Options $options): void {
         $options->registerCommand(self::COMMAND_NAME, 'Start existing mchef docker containers by container prefix');
         $options->registerArgument('prefix', 'Container prefix to start (e.g., "ally" for ally-moodle, ally-db)', false, self::COMMAND_NAME);
     }

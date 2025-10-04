@@ -51,7 +51,7 @@ final class ListAll extends AbstractCommand {
         }
     }
 
-    public function register(Options $options): void {
+   protected function register(Options $options): void {
         $options->registerCommand(self::COMMAND_NAME, 'List all mchef recipes and statuses');
     }
 }

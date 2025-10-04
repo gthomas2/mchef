@@ -8,6 +8,7 @@ use App\Service\Configurator;
 use App\Service\Main;
 use App\StaticVars;
 use App\Traits\SingletonTrait;
+use Exception;
 use RuntimeException;
 use splitbrain\phpcli\Options;
 
@@ -29,7 +30,7 @@ abstract class AbstractCommand implements SingletonInterface {
      * Register this command and apply help text to options.
      * @param Options $options
      */
-    abstract public function register(Options $options): void;
+    abstract protected function register(Options $options): void;
 
     protected function getInstanceFromOptions(Options $options): RegistryInstance {
         $args = $options->getArgs();
@@ -115,5 +116,22 @@ abstract class AbstractCommand implements SingletonInterface {
         }
 
         return null;
+    }
+
+    public function registerCommand(Options $options) {
+        $this->register($options);
+        $this->registerGlobalCommandOptions($options);
+    }
+
+    private function getSubclassConst(string $constName) {
+        $ref = new \ReflectionClass(static::class);
+        if ($ref->hasConstant($constName)) {
+            return $ref->getConstant($constName);
+        }
+        throw new \Exception("Constant $constName not defined in " . static::class);
+    }
+
+    protected function registerGlobalCommandOptions(Options $options): void {
+        $options->registerOption('help', 'Show help for this command', 'h', false, $this->getSubclassConst('COMMAND_NAME'));
     }
 }

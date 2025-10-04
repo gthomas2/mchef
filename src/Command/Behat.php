@@ -170,7 +170,7 @@ final class Behat extends AbstractCommand {
         $this->execPassthru($cmd, 'Tests failed '.$cmd);
     }
 
-    public function register(Options $options): void {
+   protected function register(Options $options): void {
         $options->registerCommand(self::COMMAND_NAME, 'Allows behat tests to be run against plugins defined in the recipe file.');
         $options->registerArgument('feature', 'Specific feature file to run.', false, self::COMMAND_NAME);
         $options->registerOption('plugins',

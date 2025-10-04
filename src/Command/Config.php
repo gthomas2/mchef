@@ -118,7 +118,7 @@ final class Config extends AbstractCommand {
         $this->cli->notice("Default PostgreSQL client has been set.");
     }
 
-    public function register(Options $options): void {
+   protected function register(Options $options): void {
         $options->registerCommand(self::COMMAND_NAME, 'Configure mchef globally');
         $options->registerOption('lang', 'Set a default language code', 'l', true, self::COMMAND_NAME);
         $options->registerOption('password', 'Set a default admin password', 'a', false, self::COMMAND_NAME);

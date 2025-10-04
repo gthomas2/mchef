@@ -106,7 +106,7 @@ final class CopySrc extends AbstractCommand {
         $this->copySrc($instance);
     }
 
-    public function register(Options $options): void {
+   protected function register(Options $options): void {
         $options->registerCommand(self::COMMAND_NAME, 'Copy Moodle source from docker container to project folder');
     }
 }
