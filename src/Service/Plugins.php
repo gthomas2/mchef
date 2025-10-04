@@ -8,14 +8,19 @@ use App\Model\PluginsInfo;
 use App\Model\Recipe;
 use App\Model\RecipePlugin;
 use App\Model\Volume;
-use PHPUnit\Framework\MockObject\MockObject;
-use splitbrain\phpcli\CLI;
 use splitbrain\phpcli\Exception;
 use splitbrain\phpcli\Options;
 
 class Plugins extends AbstractService {
-    final public static function instance(CLI|MockObject $cli): Plugins {
-        return self::setup_singleton($cli);
+
+    // Service dependencies.
+    private Main $mainService;
+    private Configurator $configuratorService;
+    private File $fileService;
+    private Docker $dockerService;
+
+    final public static function instance(): Plugins {
+        return self::setup_singleton();
     }
 
     private function getMoodlePluginPath($pluginName): string {
@@ -266,8 +271,7 @@ class Plugins extends AbstractService {
     }
 
     public function getMchefPluginsInfoPath(): string {
-        $mainService = (Main::instance($this->cli));
-        $chefPath = $mainService->getChefPath();
+        $chefPath = $this->mainService->getChefPath();
         $pluginsInfoPath = $chefPath.'/pluginsinfo.object';
         return $pluginsInfoPath;
     }
@@ -342,7 +346,8 @@ class Plugins extends AbstractService {
             return $mcPluginsInfo;
         }
 
-        $instance = Configurator::instance()->getRegisteredInstance($recipe->containerPrefix);
+        $instance = $this->configuratorService->getRegisteredInstance($recipe->containerPrefix);
+        $recipePath = $instance->recipePath ?? $recipe->getRecipePath();
 
         if (empty($recipe->plugins)) {
             return null;
@@ -367,7 +372,7 @@ class Plugins extends AbstractService {
                             $pluginPath = $this->getMoodlePluginPath($pluginName);
                             $ds = DIRECTORY_SEPARATOR;
                             // Strip out accidental double dir separators from path.
-                            $targetPath = str_replace("{$ds}{$ds}", $ds, OS::path(dirname($instance->recipePath).$ds.$pluginPath));
+                            $targetPath = str_replace("{$ds}{$ds}", $ds, OS::path(dirname($recipePath).$ds.$pluginPath));
                             if (!file_exists(OS::path($targetPath.'/version.php'))) {
                                 $this->cli->info('Moving plugin from temp folder to ' . $targetPath);
                                 if (!file_exists($targetPath) && !OS::isWindows()) {
@@ -377,15 +382,14 @@ class Plugins extends AbstractService {
                             } else {
                                 $this->cli->info('Skipping copying '.$pluginName.' as already present at '.$targetPath);
                                 // Plugin already present locally.
-                                File::instance()->deleteDir($tmpDir);
+                                $this->fileService->deleteDir($tmpDir);
                             }
                             $volumeHostPath = $targetPath;
                             if (OS::isWindows()) {
                                 // Volume path for windows needs to use forward slashes to work in docker compose!
-                                $volumeHostPath = Docker::instance($this->cli)->windowsToDockerPath($targetPath);
+                                $volumeHostPath = $this->dockerService->windowsToDockerPath($targetPath);
                             }
                             $volume = new Volume(...['path' => $pluginPath, 'hostPath' => $volumeHostPath]);
-
                             $volumes[] = $volume;
                             $plugins[$pluginName] = new Plugin(
                                 $pluginName,
@@ -406,8 +410,7 @@ class Plugins extends AbstractService {
             }
         }
         // Cache to file.
-        $mainService = (Main::instance($this->cli));
-        $chefPath = $mainService->getChefPath();
+        $chefPath = $this->mainService->getChefPath();
         if ($chefPath === null) {
             // No chef path, create one if we are at same level as recipe.
             if (realpath(dirname($recipe->getRecipePath())) === realpath(getcwd())) {
@@ -443,15 +446,13 @@ class Plugins extends AbstractService {
      * @return Plugin[]
      */
     public function getPluginsCsvFromOptions(Options $options): ?array {
-        $mainService = (Main::instance($this->cli));
-        $recipe = $mainService->getActiveInstanceRecipe();
+        $recipe = $this->mainService->getActiveInstanceRecipe();
         $pluginInfo = $this->getPluginsInfoFromRecipe($recipe);
         $pluginsCsv = $options->getOpt('plugins');
         if (!empty($pluginsCsv)) {
             $pluginComponentNames = array_map('trim', explode(',', $pluginsCsv));
-            $pluginService = (Plugins::instance($this->cli));
-            $pluginService->validatePluginComponentNames($pluginComponentNames, $pluginInfo);
-            return $pluginService->getPluginsByComponentNames($pluginComponentNames, $pluginInfo);
+            $this->validatePluginComponentNames($pluginComponentNames, $pluginInfo);
+            return $this->getPluginsByComponentNames($pluginComponentNames, $pluginInfo);
         } else if ($pluginsCsv === '') {
             return null;
         }

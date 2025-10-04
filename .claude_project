@@ -1,7 +1,7 @@
 {
-  "name": "Moodle Chef",
+  "name": "Modular Chef",
   "description": "A Docker-based development environment manager for Moodle utilizing recipes for configuration of moodle versions, environment and plugins",
-  "overview": "Moodle Chef (mchef) is a CLI tool that wraps docker, providing a development environments for Moodle projects. It supports automatic plugin installation from GitHub repositories, database management, and development tools integration including PHPUnit, Behat, and Xdebug.",
+  "overview": "Modular Chef (m-chef) is a CLI tool that wraps docker, providing a development environments for Moodle projects. It supports automatic plugin installation from GitHub repositories, database management, and development tools integration including PHPUnit, Behat, and Xdebug.",
   "primaryLanguage": "PHP",
   "technologies": [
     "PHP 8.2+",

@@ -4,20 +4,16 @@ namespace App\Service;
 use App\Helpers\OS;
 use App\Model\GlobalConfig;
 use App\Model\RegistryInstance;
-use splitbrain\phpcli\CLI;
 
 class Configurator extends AbstractService {
 
-    protected function __construct() {
-        $this->initializeConfig();
+    final public static function instance(): Configurator {
+        return self::setup_singleton()->initializeConfig();
     }
 
-    final public static function instance(?CLI $cli = null): Configurator {
-        return self::setup_singleton($cli);
-    }
-
-    private function initializeConfig(): void {
+    protected function initializeConfig(): Configurator {
         $this->establishConfigDir();
+        return $this;
     }
 
     public function configDir(): string {
@@ -93,7 +89,7 @@ class Configurator extends AbstractService {
 
     public function getRegisteredInstance(string $instanceName): ?RegistryInstance {
         $instances = $this->getInstanceRegistry();
-        $default = Configurator::instance()->getMainConfig()->instance;
+        $default = $this->getMainConfig()->instance;
         foreach ($instances as $instance) {
             if ($instance->containerPrefix === $instanceName) {
                 if ($instance->containerPrefix === $default) {
@@ -149,7 +145,7 @@ class Configurator extends AbstractService {
         $this->writeInstanceRegistry($instances);
     }
 
-    public function registerInstance(string $instanceRecipePath, ?string $uuid, string $containerPrefix): string {
+   public function registerInstance(string $instanceRecipePath, ?string $uuid, string $containerPrefix): string {
         $uuid = $uuid ?? uniqid();
         $this->upsertRegistryInstance($uuid, $instanceRecipePath, $containerPrefix);
         // We need to now put the uuid into the .mchef folder corresponding to the recipe.
@@ -158,7 +154,7 @@ class Configurator extends AbstractService {
         return $uuid;
     }
 
-    public function getMainConfig() {
+    public function getMainConfig(): GlobalConfig {
         $configPath = $this->mainConfigPath();
         if (!file_exists($configPath)) {
             return new GlobalConfig();

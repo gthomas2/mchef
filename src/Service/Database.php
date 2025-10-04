@@ -3,23 +3,16 @@
 namespace App\Service;
 
 use App\PDO\Postgres;
-use App\Traits\WithRecipe;
+use App\StaticVars;
 use PDO;
+use App\Enums\DatabaseType;
 
-enum DatabaseType: string {
-    case Postgres = 'pgsql';
-    case Mysql = 'mysql';
-}
-
-// NOTE - not used (yet)
 class Database extends AbstractService {
-
-    use WithRecipe;
 
     protected static PDO $pdoref;
 
     protected function __construct() {
-        $recipe = $this->getParsedRecipe();
+        $recipe = StaticVars::$recipe;
         $dbType = $recipe->dbType;
         if (!DatabaseType::tryFrom($dbType)) {
             throw new \Exception('Unsupported dbType '.$dbType);

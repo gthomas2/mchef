@@ -75,4 +75,36 @@ trait ExecTrait {
         // Restore output buffering.
         ini_set('output_buffering', $outputBuffering);
     }
+
+    private function resolveBinary(string $binary): string {
+        $path = trim(shell_exec("command -v " . escapeshellarg($binary) . " 2>/dev/null"));
+        return $path !== '' ? $path : $binary;
+    }
+
+    protected function execInteractive(string $cmd, array $env = []): void {
+        $tmparr = explode(' ', $cmd);
+        $tmparr[0] = $this->resolveBinary($tmparr[0]);
+        $cmd = implode(' ', $tmparr);
+        if ($this->verbose && !empty($this->cli)) {
+            $this->cli->info($cmd);
+        }
+
+        $descriptorspec = [
+            0 => STDIN,   // pass through input
+            1 => STDOUT,  // pass through output
+            2 => STDERR,  // pass through error
+        ];
+
+        $process = proc_open($cmd, $descriptorspec, $pipes, null, array_merge($_ENV, $env));
+
+        if (!is_resource($process)) {
+            throw new ExecFailed("Failed to start process: $cmd", 0, $cmd);
+        }
+
+        $returnVar = proc_close($process);
+
+        if ($returnVar !== 0) {
+            throw new ExecFailed("Exec failed: $cmd (exit $returnVar)", 0, $cmd);
+        }
+    }
 }

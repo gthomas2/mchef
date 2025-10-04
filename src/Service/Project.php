@@ -5,23 +5,28 @@ namespace App\Service;
 use splitbrain\phpcli\Exception;
 
 class Project extends AbstractService {
-    final public static function instance(\MChefCLI $cli): Project {
-        return self::setup_singleton($cli);
+
+    // Service dependencies.
+    private Main $mainService;
+    private Configurator $configuratorService;
+    private Plugins $pluginsService;
+    private File $fileService;
+
+    final public static function instance(): Project {
+        return self::setup_singleton();
     }
 
     public function purgeProjectFolderOfNonPluginCode(string $instanceName) {
-        $mainService = Main::instance($this->cli);
 
-        $instance = Configurator::instance()->getRegisteredInstance($instanceName);
+        $instance = $this->configuratorService->getRegisteredInstance($instanceName);
         if (!$instance) {
             throw new Exception ('Invalid instance '.$instance);
         }
-        $this->recipe = $mainService->getRecipe($instance->recipePath);
+        $this->recipe = $this->mainService->getRecipe($instance->recipePath);
         $projectDir = dirname($instance->recipePath);
+        $recipe = $this->mainService->getRecipe();
 
-        $recipe = $mainService->getRecipe();
-
-        $pluginsInfo = Plugins::instance($this->cli)->getPluginsInfoFromRecipe($recipe);
+        $pluginsInfo = $this->pluginsService->getPluginsInfoFromRecipe($recipe);
         // Get array of relative paths for plugins.
         $paths = array_map(function($volume) { return '.'.$volume->path; }, $pluginsInfo->volumes);
         // Add other paths to not delete.
@@ -31,6 +36,6 @@ class Project extends AbstractService {
         $paths[] = './*recipe.json';
         $this->cli->promptYesNo('All non project related files will be removed from this dir. Continue?', null,
             function() { die('Aborted!'); });
-        File::instance()->deleteAllFilesExcluding($projectDir, [], $paths);
+        $this->fileService->deleteAllFilesExcluding($projectDir, [], $paths);
     }
 }

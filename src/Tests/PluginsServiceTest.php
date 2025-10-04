@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+namespace App\Tests;
 
 use App\Model\Plugin;
 use App\Model\RecipePlugin;
@@ -9,19 +11,17 @@ use PHPUnit\Framework\TestCase;
 use App\Service\Plugins;
 use \App\Traits\CallRestrictedMethodTrait;
 
-final class PluginsServiceTest extends TestCase {
+final class PluginsServiceTest extends MchefTestCase {
     use CallRestrictedMethodTrait;
 
     public function testGetMoodlePluginPath(): void {
-        $mockCli = $this->createMock(splitbrain\phpcli\CLI::class);
-        $pluginsService = Plugins::instance($mockCli);
+        $pluginsService = Plugins::instance();
         $path = $this->callRestricted($pluginsService, 'getMoodlePluginPath', ['local_test']);
         $this->assertEquals('/local/test', $path);
     }
 
     public function testGetPluginsInfoFromRecipe(): void {
-        $mockCli = $this->createMock(splitbrain\phpcli\CLI::class);
-        $pluginsService = Plugins::instance($mockCli);
+        $pluginsService = Plugins::instance();
 
         // Test with null plugins - this should return null without any complex processing
         $recipeWithoutPlugins = new Recipe(
@@ -49,15 +49,13 @@ final class PluginsServiceTest extends TestCase {
     }
 
     public function testGetPluginComponentFromVersionFile(): void {
-        $mockCli = $this->createMock(splitbrain\phpcli\CLI::class);
-        $pluginsService = Plugins::instance($mockCli);
+        $pluginsService = Plugins::instance();
         $component = $pluginsService->getPluginComponentFromVersionFile(__DIR__.'/Fixtures/version-test.php');
         $this->assertEquals('mod_assign', $component);
     }
 
     public function testFindMoodleVersionFiles(): void {
-        $mockCli = $this->createMock(splitbrain\phpcli\CLI::class);
-        $pluginsService = Plugins::instance($mockCli);
+        $pluginsService = Plugins::instance();
 
         $tempDir = sys_get_temp_dir() . '/moodle_test_' . uniqid();
         mkdir($tempDir);
@@ -86,8 +84,7 @@ final class PluginsServiceTest extends TestCase {
     }
 
     public function testGetPluginByComponentName(): void {
-        $mockCli = $this->createMock(splitbrain\phpcli\CLI::class);
-        $pluginsService = Plugins::instance($mockCli);
+        $pluginsService = Plugins::instance();
 
         $plugin1 = new Plugin(
             'mod_assign',
@@ -127,14 +124,13 @@ final class PluginsServiceTest extends TestCase {
             Plugin::TYPE_SINGLE
         );
 
-        $this->expectException(Exception::class);
+        $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Found more than one plugin entry for component "mod_assign" this should not happen');
         $pluginsService->getPluginByComponentName('mod_assign', $pluginsInfo);
     }
 
     public function testExtractRepoInfoFromPluginString(): void {
-        $mockCli = $this->createMock(splitbrain\phpcli\CLI::class);
-        $pluginsService = Plugins::instance($mockCli);
+        $pluginsService = Plugins::instance();
 
         // Test simple URL string
         $result = $this->callRestricted($pluginsService, 'extractRepoInfoFromPlugin', ['https://github.com/user/repo.git']);
@@ -152,8 +148,7 @@ final class PluginsServiceTest extends TestCase {
     }
 
     public function testExtractRepoInfoFromPluginObject(): void {
-        $mockCli = $this->createMock(splitbrain\phpcli\CLI::class);
-        $pluginsService = Plugins::instance($mockCli);
+        $pluginsService = Plugins::instance();
 
         // Test object with all properties
         $plugin = (object)[
@@ -179,8 +174,7 @@ final class PluginsServiceTest extends TestCase {
     }
 
     public function testExtractRepoInfoFromPluginWithUpstream(): void {
-        $mockCli = $this->createMock(splitbrain\phpcli\CLI::class);
-        $pluginsService = Plugins::instance($mockCli);
+        $pluginsService = Plugins::instance();
 
         // Test the example from the recipe JSON
         $plugin = (object)[

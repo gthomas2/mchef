@@ -2,16 +2,14 @@
 
 namespace App\Service;
 use App\Helpers\OS;
-use App\MChefCLI;
 use App\Traits\ExecTrait;
 
-class Dependencies extends AbstractService {
+final class Dependencies extends AbstractService {
 
     use ExecTrait;
-    private $pluginsService;
 
-    final public static function instance(?MChefCLI $cli = null): Dependencies {
-        return self::setup_singleton($cli);
+    public static function instance(): Dependencies {
+        return self::setup_singleton();
     }
 
     private function dockerIsInstalled(): bool {

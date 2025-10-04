@@ -27,6 +27,24 @@ class GlobalConfig extends AbstractModel {
          * The default admin password for all recipes that don't define one.
          * @var string|null
          */
-        public ?string $adminPassword = null
+        public ?string $adminPassword = null,
+
+        /**
+         * Selected database client for opening DBs
+         * @var string|null
+         */
+        public ?string $dbClient = null,
+
+        /**
+         * Selected MySQL client for opening DBs
+         * @var string|null
+         */
+        public ?string $dbClientMysql = null,
+
+        /**
+         * Selected PostgreSQL client for opening DBs
+         * @var string|null
+         */
+        public ?string $dbClientPgsql = null
     ) {}
 }

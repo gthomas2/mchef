@@ -3,9 +3,6 @@
 namespace App\Command;
 
 use App\Exceptions\ExecFailed;
-use App\Helpers\OS;
-use App\Model\Plugin;
-use App\Service\Configurator;
 use App\Service\Docker;
 use App\Service\Main;
 use App\Service\Plugins;
@@ -14,21 +11,24 @@ use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Exception;
 use splitbrain\phpcli\Options;
-use App\MChefCLI;
 
-class Behat extends AbstractCommand {
+final class Behat extends AbstractCommand {
 
     use SingletonTrait;
     use ExecTrait;
 
+    // Service dependencies.
+    protected Plugins $pluginsService;
+    protected Docker $dockerService;
+
+    // Constants.
     const COMMAND_NAME = 'behat';
     const NETWORK_NAME = 'mc-network';
 
     protected string $browser = 'chrome'; // Not configurable for now.
 
-    final public static function instance(MChefCLI $cli): Behat {
-        $instance = self::setup_singleton($cli);
-        return $instance;
+    public static function instance(): Behat {
+        return self::setup_singleton();
     }
 
     private function getBehatRunCodeFromInitOutput(string $initOutput): string {
@@ -57,20 +57,17 @@ class Behat extends AbstractCommand {
     }
 
     public function execute(Options $options): void {
-        $mainService = Main::instance($this->cli);
-
         $this->setStaticVarsFromOptions($options);
         $instance = StaticVars::$instance;
         $instanceName = $instance->containerPrefix;
 
         $tags = $options->getOpt('tags');
         $this->verbose = !empty($options->getOpt('verbose'));
-        $recipe = $mainService->getRecipe();
+        $recipe = $this->mainService->getRecipe();
         if (!$recipe->includeBehat) {
             throw new Exception('This recipe does not have includeBehat set to true, OR you need to run mchef.php [recipefile] again.');
         }
-        $docker = Docker::instance();
-        $dockerPs = $docker->getDockerPs();
+        $dockerPs = $this->dockerService->getDockerPs();
         $alreadyRunning = false;
         // Note - the mchef prefix in the container name is hardcoded because it is intended to be shared across projects.
         $containerName = 'mchef-behat-'.$this->browser;
@@ -86,7 +83,7 @@ class Behat extends AbstractCommand {
         }
 
         $containerAlreadyExists = false;
-        $dockerContainers = $docker->getDockerContainers();
+        $dockerContainers = $this->dockerService->getDockerContainers();
         foreach ($dockerContainers as $container) {
             if ($container->names === $containerName) {
                 $containerAlreadyExists = true;
@@ -112,7 +109,7 @@ class Behat extends AbstractCommand {
         }
 
         $this->cli->notice('Initializing behat');
-        $moodleContainer = $mainService->getDockerMoodleContainerName($instanceName);
+        $moodleContainer = $this->mainService->getDockerMoodleContainerName($instanceName);
         $cmd = 'docker exec -it '.$moodleContainer.' php /var/www/html/moodle/admin/tool/behat/cli/init.php --axe';
         $this->execStream($cmd, 'Failed to initialize behat');
         // !NOTE AWFUL, AWFUL BUG FIX!
@@ -134,8 +131,7 @@ class Behat extends AbstractCommand {
             $featureFile = $args[0];
         }
 
-        $pluginsService = Plugins::instance($this->cli);
-        $plugins = $pluginsService->getPluginsCsvFromOptions($options);
+        $plugins = $this->pluginsService->getPluginsCsvFromOptions($options);
 
         $runMsg = 'Executing behat tests';
         if (!empty($featureFile)) {
@@ -174,7 +170,7 @@ class Behat extends AbstractCommand {
         $this->execPassthru($cmd, 'Tests failed '.$cmd);
     }
 
-    public function register(Options $options): void {
+   protected function register(Options $options): void {
         $options->registerCommand(self::COMMAND_NAME, 'Allows behat tests to be run against plugins defined in the recipe file.');
         $options->registerArgument('feature', 'Specific feature file to run.', false, self::COMMAND_NAME);
         $options->registerOption('plugins',

@@ -2,54 +2,44 @@
 
 namespace App\Command;
 
-use App\Model\Recipe;
 use App\Service\Configurator;
 use App\Service\Docker;
-use App\Service\File;
 use App\Service\Main;
-use App\Service\Plugins;
-use App\Service\Project;
-use App\Service\RecipeParser;
+use App\Service\RecipeService;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Options;
-use App\MChefCLI;
 
-class ListAll extends AbstractCommand {
-    // Allow dependency injection for easier testing
-    protected $configurator;
-    protected $main;
-    protected $docker;
-    protected $recipeParser;
+final class ListAll extends AbstractCommand {
 
     use SingletonTrait;
     use ExecTrait;
 
+    // Service Dependencies
+    private Docker $dockerService;
+    private RecipeService $recipeService;
+
+    // Constants
     const COMMAND_NAME = 'list';
 
-    final public static function instance(MChefCLI $cli): ListAll {
-        $instance = self::setup_singleton($cli);
-        return $instance;
+    public static function instance(): ListAll {
+        return self::setup_singleton();
     }
 
     public function execute(Options $options): void {
-        $configurator = $this->configurator ?? Configurator::instance($this->cli);
-        $main = $this->main ?? Main::instance($this->cli);
-        $docker = $this->docker ?? Docker::instance($this->cli);
-        $recipeParser = $this->recipeParser ?? RecipeParser::instance();
-        $instances = $configurator->getInstanceRegistry();
-        $config = $configurator->getMainConfig();
+        $instances = $this->configuratorService->getInstanceRegistry();
+        $config = $this->configuratorService->getMainConfig();
         $selectedInstance = $config->instance ?? null;
         foreach ($instances as $instance) {
             if (!file_exists($instance->recipePath)) {
                 $this->cli->warning('⚠️ Recipe missing '.$instance->recipePath);
             }
 
-            $recipe = $recipeParser->parse($instance->recipePath);
-            $moodleContainerName = $main->getDockerMoodleContainerName(null, $recipe);
+            $recipe = $this->recipeService->parse($instance->recipePath);
+            $moodleContainerName = $this->mainService->getDockerMoodleContainerName(null, $recipe);
 
             try {
-                $running = $docker->checkContainerRunning($moodleContainerName);
+                $running = $this->dockerService->checkContainerRunning($moodleContainerName);
             } catch (\Exception $e) {
                 $running = false; // Assume not running.
             }
@@ -61,7 +51,7 @@ class ListAll extends AbstractCommand {
         }
     }
 
-    public function register(Options $options): void {
+   protected function register(Options $options): void {
         $options->registerCommand(self::COMMAND_NAME, 'List all mchef recipes and statuses');
     }
 }

@@ -7,27 +7,26 @@ use App\Database\Mysql;
 use App\Database\Postgres;
 use App\Model\Recipe;
 use App\Model\RegistryInstance;
-use App\Service\Main;
 use App\StaticVars;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
 use splitbrain\phpcli\Options;
-use App\MChefCLI;
 
 class Database extends AbstractCommand {
 
     use SingletonTrait;
     use ExecTrait;
 
-    protected RegistryInstance $instance;
-    protected Recipe $recipe;
-    protected DatabaseInterface $database;
+    // Other properties.
+    private RegistryInstance $instance;
+    private Recipe $recipe;
+    private Mysql | Postgres $database;
 
+    // Constants.
     const COMMAND_NAME = 'database';
 
-    final public static function instance(MChefCLI $cli): Database {
-        $instance = self::setup_singleton($cli);
-        return $instance;
+    final public static function instance(): Database {
+        return self::setup_singleton();
     }
 
     private function execDatabase() {
@@ -48,9 +47,49 @@ class Database extends AbstractCommand {
         );
     }
 
-    private function dbeaver() {
-        $cmd = $this->database->dbeaverConnectionString();
-        $this->exec($cmd);
+    private function openDatabaseClient(?string $client): void {
+        $cmd = match ($client) {
+            'dbeaver' => $this->database->dbeaverConnectionString(),
+            'pgadmin' => $this->getPgAdminCommand(),
+            'mysql workbench' => $this->getMysqlWorkbenchCommand(),
+            'psql (cli)', 'psql' => $this->getPsqlCommand(),
+            'mysql (cli)', 'mysql' => $this->getMysqlCommand(),
+            default => throw new \InvalidArgumentException("Unsupported client: $client")
+        };
+
+        if (is_string($cmd)) {
+            $this->exec($cmd);
+        } else if (is_array($cmd)) {
+            $this->execInteractive($cmd[0], $cmd[1]);
+        }
+    }
+
+    private function getPgAdminCommand(): string {
+        if ($this->recipe->dbType !== 'pgsql') {
+            throw new \InvalidArgumentException('pgAdmin can only be used with PostgreSQL databases');
+        }
+        return $this->database->pgAdminConnectionString();
+    }
+
+    private function getMysqlWorkbenchCommand(): string {
+        if ($this->recipe->dbType !== 'mysql') {
+            throw new \InvalidArgumentException('MySQL Workbench can only be used with MySQL databases');
+        }
+        return $this->database->mysqlWorkbenchConnectionString();
+    }
+
+    private function getPsqlCommand(): array {
+        if ($this->recipe->dbType !== 'pgsql') {
+            throw new \InvalidArgumentException('psql can only be used with PostgreSQL databases');
+        }
+        return $this->database->psqlConnectionCommand();
+    }
+
+    private function getMysqlCommand(): string {
+        if ($this->recipe->dbType !== 'mysql') {
+            throw new \InvalidArgumentException('mysql CLI can only be used with MySQL databases');
+        }
+        return $this->database->mysqlConnectionString();
     }
 
     private function info() {
@@ -78,8 +117,7 @@ class Database extends AbstractCommand {
             exit(1);
         }
         $this->instance = StaticVars::$instance;
-        $mainService = Main::instance($this->cli);
-        $this->recipe = $mainService->getRecipe($this->instance->recipePath);
+        $this->recipe = $this->mainService->getRecipe($this->instance->recipePath);
         $this->database = $this->resolveDatabase();
 
         if (!empty($options->getOpt('wipe'))) {
@@ -94,18 +132,50 @@ class Database extends AbstractCommand {
             $this->info();
             return;
         }
-        if (!empty($options->getOpt('dbeaver'))) {
-            $this->dbeaver();
+        if (!empty($options->getOpt('client'))) {
+            $clientValue = $this->getOptionalOptValueFromArgv('client', 'c');
+            if (!$clientValue) {
+                // Check for configured default client
+                $defaultClient = $this->resolveDbClient();
+                if ($defaultClient !== null) {
+                    $this->openDatabaseClient($defaultClient);
+                    return;
+                }
+
+                $this->cli->error('No database client configured. Use "mchef config --dbclient" to configure one.');
+                $clientValue = $defaultClient;
+            }
+            $this->openDatabaseClient($clientValue);
             return;
         }
-        $this->cli->error('You must specify an option - e.g. --exec, --wipe, --info');
     }
 
-    public function register(Options $options): void {
+    private function resolveDbClient(): ?string {
+        $config = $this->configuratorService->getMainConfig();
+
+        // First priority: dbClient global config
+        if (!empty($config->dbClient)) {
+            return $config->dbClient;
+        }
+
+        // Second priority: database-specific clients
+        if ($this->recipe->dbType === 'mysql' && !empty($config->dbClientMysql)) {
+            return $config->dbClientMysql;
+        }
+
+        if ($this->recipe->dbType === 'pgsql' && !empty($config->dbClientPgsql)) {
+            return $config->dbClientPgsql;
+        }
+
+        // No client configured
+        return null;
+    }
+
+   protected function register(Options $options): void {
         $options->registerCommand(self::COMMAND_NAME, 'Database utilities');
         $options->registerOption('exec', 'Exec onto database', 'e', false, self::COMMAND_NAME);
         $options->registerOption('wipe', 'Wipe database', 'w', false, self::COMMAND_NAME);
         $options->registerOption('info', 'Get db connection info', 'i', false, self::COMMAND_NAME);
-        $options->registerOption('dbeaver', 'Open in dbeaver', 'b', false, self::COMMAND_NAME);
+        $options->registerOption('client', 'Specify database client (dbeaver, pgadmin, mysql workbench, psql (cli), mysql (cli))', 'c', false, self::COMMAND_NAME);
     }
 }

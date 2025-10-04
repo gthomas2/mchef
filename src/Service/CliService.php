@@ -3,6 +3,9 @@
 namespace App\Service;
 use App\Helpers\OS;
 
+/**
+ * Service facilitating CLI but NOT the CLI (See MChefCLI for the actual CLI)
+ */
 class CliService extends AbstractService {
 
     final public static function instance(): CliService {
