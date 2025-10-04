@@ -214,10 +214,14 @@ class MChefCLI extends CLI {
         }
 
         if ($args = $options->getArgs()) {
-            $recipe = $args[0];
-            // Important - if we are upping a new recipe then we should unset the currently selected instance.
-            \App\Service\Configurator::instance()->setMainConfigField('instance', null);
+            $recipe = $args[0];            
+            // Important - if we are upping a new recipe then we should temprarilly unset the currently selected instance.
+            $configurator = \App\Service\Configurator::instance();
+            $instance = $configurator->getMainConfig()->instance;
+            $configurator->setMainConfigField('instance', null);
             $this->main->up($recipe);
+            // Restore instance.
+            $configurator->setMainConfigField('instance', $instance);
             return;
         }
 
