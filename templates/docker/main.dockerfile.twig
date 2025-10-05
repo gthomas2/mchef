@@ -1,4 +1,4 @@
-FROM moodlehq/moodle-php-apache:{{ phpVersion }} as main-recipe
+FROM moodlehq/moodle-php-apache:{{ phpVersion }} AS main-recipe
 
 LABEL org.label-schema.schema-version="{{ version ?? '0.0.1' }}"
 LABEL org.label-schema.name="{{ name ?? 'moodle-chef' }}"

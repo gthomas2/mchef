@@ -77,7 +77,7 @@ final class InstallToBin extends AbstractService {
         }
         $binFilePath = !OS::isWindows() ? "$binDir/mchef" : OS::path("$binDir/mchef.cmd");
 
-        if (file_exists($binFilePath)) {
+        if (file_exists($binFilePath) || is_link($binFilePath)) {
             try {
                 unlink($binFilePath);
             } catch (\Exception $e) {

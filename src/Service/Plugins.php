@@ -393,7 +393,7 @@ class Plugins extends AbstractService {
                                 // Plugin already present locally.
                                 $this->fileService->deleteDir($tmpDir);
                             }
-                            $volumeHostPath = $targetPath;
+                            $volumeHostPath = realpath($targetPath); // Not so portable but fine for local development. Prod won't use mounts anyway.
                             if (OS::isWindows()) {
                                 // Volume path for windows needs to use forward slashes to work in docker compose!
                                 $volumeHostPath = $this->dockerService->windowsToDockerPath($targetPath);
