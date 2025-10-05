@@ -36,6 +36,10 @@ class Up extends AbstractCommand {
             exit(1);
         }
 
+        // Check if this instance is different from the currently active instance
+        $currentActiveInstance = $this->configuratorService->getMainConfig()->instance;
+        $isDifferentInstance = ($currentActiveInstance !== $containerPrefix);
+
         // Build expected container names from the prefix
         $moodleContainer = $containerPrefix . '-moodle';
         $dbContainer = $containerPrefix . '-db';
@@ -71,6 +75,18 @@ class Up extends AbstractCommand {
         $this->proxyService->ensureProxyRunning();
 
         $this->cli->success('Containers started successfully!');
+
+        // If this is a different instance from the currently active one, prompt to set as active
+        if ($isDifferentInstance) {
+            $msg = $currentActiveInstance ? " currently active: '$currentActiveInstance'" : '';
+
+            $setAsActive = $this->cli->promptYesNo("Do you want to set '$containerPrefix' as the active instance?($msg)", null, null, 'n');
+            
+            if ($setAsActive) {
+                $this->configuratorService->setMainConfigField('instance', $containerPrefix);
+                $this->cli->success("Set '$containerPrefix' as the active instance.");
+            }
+        }
     }
 
     private function showMissingContainersError(string $containerPrefix): void {
