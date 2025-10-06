@@ -198,4 +198,89 @@ class Docker extends AbstractService {
 
         return $dockerPath;
     }
+
+    /**
+     * Get all volumes attached to a specific container.
+     * 
+     * @param string $containerName The name of the container
+     * @return array Array of volume names
+     */
+    public function getContainerVolumes(string $containerName): array {
+        try {
+            // Safely escape container name for shell usage
+            $escapedContainerName = escapeshellarg($containerName);
+            
+            // Use docker inspect to get mount information
+            $cmd = "docker inspect --format '{{range .Mounts}}{{if eq .Type \"volume\"}}{{.Name}}{{\"\\n\"}}{{end}}{{end}}' $escapedContainerName";
+            $output = $this->exec($cmd, null, true);
+            
+            if (empty(trim($output))) {
+                return [];
+            }
+            
+            $volumes = array_filter(explode("\n", trim($output)), function($volume) {
+                return !empty(trim($volume));
+            });
+            
+            return array_map('trim', $volumes);
+        } catch (\Exception $e) {
+            // Container might not exist, return empty array
+            return [];
+        }
+    }
+
+    /**
+     * Get all volumes for multiple containers associated with an instance.
+     * 
+     * @param string $instanceName The MChef instance name
+     * @return array Array of unique volume names
+     */
+    public function getInstanceVolumes(string $instanceName): array {
+        $containers = [
+            "{$instanceName}-moodle",
+            "{$instanceName}-db"
+        ];
+        
+        $allVolumes = [];
+        
+        foreach ($containers as $containerName) {
+            $volumes = $this->getContainerVolumes($containerName);
+            $allVolumes = array_merge($allVolumes, $volumes);
+        }
+        
+        // Return unique volumes only
+        return array_unique($allVolumes);
+    }
+
+    /**
+     * Remove a volume by name.
+     * 
+     * @param string $volumeName The name of the volume to remove
+     * @return bool True if successful, false otherwise
+     */
+    public function removeVolume(string $volumeName): bool {
+        try {
+            $escapedVolumeName = escapeshellarg($volumeName);
+            $this->exec("docker volume rm $escapedVolumeName", null, true);
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Check if a volume exists.
+     * 
+     * @param string $volumeName The name of the volume
+     * @return bool True if volume exists, false otherwise
+     */
+    public function volumeExists(string $volumeName): bool {
+        try {
+            $escapedVolumeName = escapeshellarg($volumeName);
+            $this->exec("docker volume inspect $escapedVolumeName", null, true);
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
 }
