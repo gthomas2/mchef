@@ -4,6 +4,7 @@ namespace App\Command;
 
 use App\Service\Configurator;
 use App\Service\Docker;
+use App\Service\File;
 use App\StaticVars;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
@@ -16,6 +17,7 @@ class Destroy extends AbstractCommand {
 
     // Service dependencies.
     private Docker $dockerService;
+    private File $fileService;
 
     // Constants.
     const COMMAND_NAME = 'destroy';
@@ -29,8 +31,9 @@ class Destroy extends AbstractCommand {
         
         if (empty($args) || empty($args[0])) {
             $this->cli->error('Instance name is required.');
-            $this->cli->info('Usage: mchef destroy <instance-name>');
+            $this->cli->info('Usage: mchef destroy <instance-name> [--dry-run]');
             $this->cli->info('Example: mchef destroy my-project');
+            $this->cli->info('Example: mchef destroy my-project --dry-run');
             exit(1);
         }
 
@@ -58,8 +61,15 @@ class Destroy extends AbstractCommand {
             exit(1);
         }
 
+        // Check if this is a dry run
+        $isDryRun = (bool) $options->getOpt('dry-run');
+
         // Show what will be destroyed
-        $this->cli->warning("The following will be destroyed for instance '$instanceName':");
+        if ($isDryRun) {
+            $this->cli->info("DRY RUN: The following would be destroyed for instance '$instanceName':");
+        } else {
+            $this->cli->warning("The following will be destroyed for instance '$instanceName':");
+        }
         $this->cli->info("  - Container: {$instanceName}-moodle");
         $this->cli->info("  - Container: {$instanceName}-db");
         $volumes = $this->dockerService->getInstanceVolumes($instanceName);
@@ -72,6 +82,20 @@ class Destroy extends AbstractCommand {
         }
         $this->cli->info("  - Instance registration");
 
+        // Check for mchef directory that would be deleted
+        $mchefPath = $this->mainService->getChefPath();
+        if (!empty($mchefPath) && is_dir($mchefPath)) {
+            if (basename($mchefPath) === '.mchef') {
+                $this->cli->info("  - Directory: $mchefPath");
+            }
+        }
+
+        // If dry run, exit early without prompting or performing actions
+        if ($isDryRun) {
+            $this->cli->success("DRY RUN: No actual changes were made.");
+            return;
+        }
+
         // Safety prompt - require typing "yes" exactly
         $response = $this->cli->promptInput(
             "All associated containers / data will be destroyed. Type 'yes' to confirm: "
@@ -83,6 +107,19 @@ class Destroy extends AbstractCommand {
         }
 
         $this->cli->notice("Destroying instance '$instanceName'...");
+
+        $mchefPath = $this->mainService->getChefPath();
+        if (empty($mchefPath) || !is_dir($mchefPath)) {
+            $this->cli->warning("Could not determine mchef path for project.");
+        } else {
+            if (basename($mchefPath) !== '.mchef') {
+                $this->cli->warning("Invalid mchef path $mchefPath");
+            } else {
+                // Wipe the .mchef directory.
+                $this->cli->info("Wiping mchef path: " . ($mchefPath ?: 'unknown'));
+                $this->fileService->deleteDir($mchefPath);
+            }
+        }        
 
         // Destroy containers and volumes
         $this->destroyContainers($instanceName);
@@ -195,5 +232,6 @@ class Destroy extends AbstractCommand {
     protected function register(Options $options): void {
         $options->registerCommand(self::COMMAND_NAME, 'Completely destroy an mchef instance (containers, volumes, and registration)');
         $options->registerArgument('instance', 'Instance name to destroy (e.g., "my-project")', true, self::COMMAND_NAME);
+        $options->registerOption('dry-run', 'Show what would be destroyed without actually performing any deletions', null, false, self::COMMAND_NAME);
     }
 }

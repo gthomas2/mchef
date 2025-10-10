@@ -6,19 +6,21 @@ The destroy command provides a safe way to completely remove MChef instances, in
 ## Implementation Details
 
 ### Command Structure
-- **Command**: `mchef destroy <instance-name>`
+- **Command**: `mchef destroy <instance-name> [--dry-run]`
 - **Location**: [`src/Command/Destroy.php`](../../src/Command/Destroy.php)
 - **Base Class**: `AbstractCommand`
 - **Traits**: `SingletonTrait`, `ExecTrait`
+- **Options**: `--dry-run` - Show what would be destroyed without performing actual deletions
 
 ### Key Features
 
 #### 1. **Safety Validations**
 - **Input validation**: Instance names must match strict pattern (`[a-zA-Z0-9_-]{1,64}`)
 - **Shell escaping**: All container and volume names are properly escaped using `escapeshellarg()`
+- **Dry-run option**: `--dry-run` shows destruction plan without performing any actions
 - Verifies instance exists in registry before proceeding
 - Shows detailed list of what will be destroyed
-- Requires typing exact word "yes" to confirm (not just "y")
+- Requires typing exact word "yes" to confirm (not just "y") unless using `--dry-run`
 
 #### 2. **Complete Cleanup**
 - **Containers**: Stops and removes both `{instance}-moodle` and `{instance}-db` containers
@@ -74,12 +76,14 @@ These methods use `docker inspect` to reliably identify volumes attached to cont
 
 ### Workflow
 
-1. **Validation**: Verify instance exists in registry
-2. **Discovery**: List containers and volumes that will be destroyed
-3. **Confirmation**: Require user to type "yes" exactly
-4. **Container Cleanup**: Stop and remove containers
-5. **Volume Cleanup**: Remove attached volumes using Docker service
-6. **Registry Cleanup**: Remove instance from registry and clear active instance if needed
+1. **Validation**: Verify instance exists in registry and validate instance name format
+2. **Discovery**: List containers, volumes, and directories that will be destroyed
+3. **Dry-run check**: If `--dry-run` option is used, display plan and exit without changes
+4. **Confirmation**: Require user to type "yes" exactly (only for actual destruction)
+5. **Container Cleanup**: Stop and remove containers
+6. **Volume Cleanup**: Remove attached volumes using Docker service
+7. **Directory Cleanup**: Remove `.mchef` directory if found
+8. **Registry Cleanup**: Remove instance from registry and clear active instance if needed
 
 ### Error Handling
 - Graceful handling of missing containers/volumes
@@ -102,13 +106,27 @@ These methods use `docker inspect` to reliably identify volumes attached to cont
 # Destroy a specific instance
 mchef destroy my-project
 
-# Example output:
+# Preview what would be destroyed without actually destroying anything
+mchef destroy my-project --dry-run
+
+# Example dry-run output:
+# DRY RUN: The following would be destroyed for instance 'my-project':
+#   - Container: my-project-moodle
+#   - Container: my-project-db
+#   - Volume: mc-my-project_moodledata
+#   - Volume: mc-my-project_pgdata
+#   - Instance registration
+#   - Directory: /path/to/project/.mchef
+# DRY RUN: No actual changes were made.
+
+# Example actual destruction output:
 # The following will be destroyed for instance 'my-project':
 #   - Container: my-project-moodle
 #   - Container: my-project-db
 #   - Volume: mc-my-project_moodledata
 #   - Volume: mc-my-project_pgdata
 #   - Instance registration
+#   - Directory: /path/to/project/.mchef
 # All associated containers / data will be destroyed. Type 'yes' to confirm: yes
 ```
 

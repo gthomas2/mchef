@@ -50,7 +50,7 @@ class Main extends AbstractService {
         return realpath("$chefPath/../");
     }
 
-    final public function getChefPath($failOnNotFound = false): ?string {
+    public function getChefPath($failOnNotFound = false): ?string {
         if ($this->chefPath) {
             return $this->chefPath;
         }
