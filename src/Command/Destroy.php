@@ -2,12 +2,12 @@
 
 namespace App\Command;
 
-use App\Service\Configurator;
 use App\Service\Docker;
 use App\Service\File;
 use App\StaticVars;
 use App\Traits\ExecTrait;
 use App\Traits\SingletonTrait;
+use Exception;
 use splitbrain\phpcli\Options;
 
 class Destroy extends AbstractCommand {
@@ -37,26 +37,30 @@ class Destroy extends AbstractCommand {
             exit(1);
         }
 
-        $instanceName = $args[0];
-        
-        // Validate instance name for security
-        if (!$this->isValidInstanceName($instanceName)) {
-            $this->cli->error('Invalid instance name. Instance names must contain only letters, numbers, hyphens, and underscores.');
-            exit(1);
-        }
-
-        // Verify that the instance exists in the registry
-        $registeredInstance = $this->configuratorService->getRegisteredInstance($instanceName);
-        if (!$registeredInstance) {
-            $this->cli->error("Instance '$instanceName' is not registered.");
-            $this->cli->info("Available instances:");
-            $instances = $this->configuratorService->getInstanceRegistry();
-            if (empty($instances)) {
-                $this->cli->info("  No instances found.");
-            } else {
-                foreach ($instances as $instance) {
-                    $this->cli->info("  - {$instance->containerPrefix}");
+        // Use the standard pattern like other commands, but provide helpful error messages
+        try {
+            $this->setStaticVarsFromOptions($options);
+            $instance = StaticVars::$instance;
+            $instanceName = $instance->containerPrefix;
+        } catch (Exception $e) {
+            // Check if it's an unregistered instance and provide helpful error message
+            $instanceName = $args[0];
+            $registeredInstance = $this->configuratorService->getRegisteredInstance($instanceName);
+            
+            if (!$registeredInstance) {
+                $this->cli->error("Instance '$instanceName' is not registered.");
+                $this->cli->info("Available instances:");
+                $instances = $this->configuratorService->getInstanceRegistry();
+                if (empty($instances)) {
+                    $this->cli->info("  No instances found.");
+                } else {
+                    foreach ($instances as $instance) {
+                        $this->cli->info("  - {$instance->containerPrefix}");
+                    }
                 }
+            } else {
+                // Re-throw if it's a different error (like validation)
+                $this->cli->error($e->getMessage());
             }
             exit(1);
         }
@@ -131,23 +135,6 @@ class Destroy extends AbstractCommand {
         $this->cli->success("Instance '$instanceName' has been completely destroyed.");
     }
 
-    /**
-     * Validate instance name to prevent shell injection.
-     * Instance names should only contain alphanumeric characters, hyphens, and underscores.
-     */
-    private function isValidInstanceName(string $instanceName): bool {
-        // Allow letters, numbers, hyphens, and underscores only
-        // Must be between 1 and 64 characters
-        return preg_match('/^[a-zA-Z0-9_-]{1,64}$/', $instanceName) === 1;
-    }
-
-    /**
-     * Safely escape a string for shell usage.
-     */
-    private function escapeShellArg(string $arg): string {
-        return escapeshellarg($arg);
-    }
-
     private function destroyContainers(string $instanceName): void {
         $containers = [
             "{$instanceName}-moodle",
@@ -158,7 +145,7 @@ class Destroy extends AbstractCommand {
             $this->cli->info("Checking container: $containerName");
             
             // Safely escape container name for shell usage
-            $escapedContainerName = $this->escapeShellArg($containerName);
+            $escapedContainerName = escapeshellarg($containerName);
             
             // Check if container exists
             $cmd = "docker ps -a --filter name=^{$containerName}$ --format \"{{.Names}}\"";

@@ -5,6 +5,7 @@ namespace App\Tests;
 use App\Command\Destroy;
 use App\MChefCLI;
 use App\Model\GlobalConfig;
+use App\Model\Recipe;
 use App\Model\RegistryInstance;
 use App\Service\Configurator;
 use App\Service\Docker;
@@ -39,7 +40,7 @@ class DestroyCommandTest extends MchefTestCase {
         $this->docker = $this->createMock(Docker::class);
         $this->main = $this->getMockBuilder(Main::class)
             ->disableOriginalConstructor()
-            ->onlyMethods(['getChefPath'])
+            ->onlyMethods(['getChefPath', 'getRecipe'])
             ->getMock();
         $this->file = $this->createMock(File::class);
         
@@ -77,6 +78,12 @@ class DestroyCommandTest extends MchefTestCase {
             ->with('test-instance')
             ->willReturn($instance);
         
+        // Mock getRecipe call that setStaticVarsFromOptions makes
+        $mockRecipe = $this->createMock(Recipe::class);
+        $this->main->method('getRecipe')
+            ->with('/path/to/recipe.json')
+            ->willReturn($mockRecipe);
+        
         $this->docker->method('getInstanceVolumes')
             ->with('test-instance')
             ->willReturn(['test-volume']);
@@ -84,8 +91,8 @@ class DestroyCommandTest extends MchefTestCase {
         $this->cli->method('promptInput')
             ->willReturn('no'); // User types "no" instead of "yes"
         
-        // Expect the CLI to show what will be destroyed
-        $this->cli->expects($this->exactly(5))
+        // Expect the CLI to show what will be destroyed (now includes the "Using instance" message)
+        $this->cli->expects($this->exactly(6)) // Updated count to include "Using instance" message
             ->method('info');
         
         $this->cli->expects($this->once())
@@ -113,6 +120,13 @@ class DestroyCommandTest extends MchefTestCase {
         
         $this->configurator->method('getMainConfig')
             ->willReturn($globalConfig);
+        
+        // Mock getRecipe call that setStaticVarsFromOptions makes
+        $mockRecipe = $this->createMock(Recipe::class);
+        $mockRecipe->name = 'test-recipe';
+        $this->main->method('getRecipe')
+            ->with('/path/to/recipe.json')
+            ->willReturn($mockRecipe);
         
         $this->docker->method('getInstanceVolumes')
             ->with('test-instance')
@@ -144,7 +158,7 @@ class DestroyCommandTest extends MchefTestCase {
     }
 
     public function testIsValidInstanceName(): void {
-        // Test the validation method directly
+        // Test the validation method directly (now inherited from AbstractCommand)
         $reflection = new \ReflectionClass($this->destroyCommand);
         $method = $reflection->getMethod('isValidInstanceName');
         $method->setAccessible(true);
@@ -177,6 +191,13 @@ class DestroyCommandTest extends MchefTestCase {
         $this->configurator->method('getMainConfig')
             ->willReturn($globalConfig);
         
+        // Mock getRecipe call that setStaticVarsFromOptions makes
+        $mockRecipe = $this->createMock(Recipe::class);
+        $mockRecipe->name = 'test-recipe';
+        $this->main->method('getRecipe')
+            ->with('/path/to/recipe.json')
+            ->willReturn($mockRecipe);
+        
         $this->docker->method('getInstanceVolumes')
             ->willReturn([]); // No volumes
         
@@ -206,6 +227,13 @@ class DestroyCommandTest extends MchefTestCase {
         
         $this->configurator->method('getMainConfig')
             ->willReturn($globalConfig);
+        
+        // Mock getRecipe call that setStaticVarsFromOptions makes
+        $mockRecipe = $this->createMock(Recipe::class);
+        $mockRecipe->name = 'test-recipe';
+        $this->main->method('getRecipe')
+            ->with('/path/to/recipe.json')
+            ->willReturn($mockRecipe);
         
         $this->docker->method('getInstanceVolumes')
             ->willReturn([]);
@@ -247,6 +275,13 @@ class DestroyCommandTest extends MchefTestCase {
         $this->configurator->method('getMainConfig')
             ->willReturn($globalConfig);
         
+        // Mock getRecipe call that setStaticVarsFromOptions makes
+        $mockRecipe = $this->createMock(Recipe::class);
+        $mockRecipe->name = 'test-recipe';
+        $this->main->method('getRecipe')
+            ->with('/path/to/recipe.json')
+            ->willReturn($mockRecipe);
+        
         $this->docker->method('getInstanceVolumes')
             ->willReturn(['test-volume-1', 'test-volume-2']);
         
@@ -257,6 +292,7 @@ class DestroyCommandTest extends MchefTestCase {
         $this->cli->expects($this->atLeastOnce())
             ->method('info')
             ->withConsecutive(
+                ["-- Using instance \"test-instance\" --"],
                 ["DRY RUN: The following would be destroyed for instance 'test-instance':"],
                 ["  - Container: test-instance-moodle"],
                 ["  - Container: test-instance-db"],
