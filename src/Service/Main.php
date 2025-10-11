@@ -50,7 +50,7 @@ class Main extends AbstractService {
         return realpath("$chefPath/../");
     }
 
-    final public function getChefPath($failOnNotFound = false): ?string {
+    public function getChefPath($failOnNotFound = false): ?string {
         if ($this->chefPath) {
             return $this->chefPath;
         }
@@ -340,7 +340,7 @@ class Main extends AbstractService {
         }
         $toAdd = array_filter($toAdd, function($new) use($hosts) {
             foreach ($hosts as $existing) {
-                if (strpos($existing, $new) !== false && strpos($existing, '#') === false) {
+                if (preg_match('/^127\.0\.0\.1\s+' . preg_quote($new, '/') . '$/m', $existing)) {
                     // Already exists - no need to add.
                     return false;
                 }

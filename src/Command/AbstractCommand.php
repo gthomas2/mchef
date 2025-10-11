@@ -38,6 +38,11 @@ abstract class AbstractCommand implements SingletonInterface {
         // If instance name is provided as argument
         if (!empty($args)) {
             $instanceName = $args[0];
+            
+            // Validate instance name format for security
+            if (!$this->isValidInstanceName($instanceName)) {
+                throw new Exception('Invalid instance name format. Instance names must contain only letters, numbers, hyphens, and underscores (1-64 characters).');
+            }
         } else {
             $instanceName = $this->mainService->resolveActiveInstanceName();
         }
@@ -134,4 +139,18 @@ abstract class AbstractCommand implements SingletonInterface {
     protected function registerGlobalCommandOptions(Options $options): void {
         $options->registerOption('help', 'Show help for this command', 'h', false, $this->getSubclassConst('COMMAND_NAME'));
     }
+
+    /**
+     * Validate instance name to prevent shell injection and ensure consistent naming.
+     * Instance names should only contain alphanumeric characters, hyphens, and underscores.
+     * 
+     * @param string $instanceName The instance name to validate
+     * @return bool True if the instance name is valid, false otherwise
+     */
+    protected function isValidInstanceName(string $instanceName): bool {
+        // Allow letters, numbers, hyphens, and underscores only
+        // Must be between 1 and 64 characters
+        return preg_match('/^[a-zA-Z0-9_-]{1,64}$/', $instanceName) === 1;
+    }
+
 }

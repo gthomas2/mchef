@@ -196,4 +196,27 @@ class Configurator extends AbstractService {
 
         return $port;
     }
+
+    /**
+     * Remove an instance from the registry by instance name.
+     * 
+     * @param string $instanceName The container prefix (instance name) to remove
+     * @return bool True if instance was found and removed, false otherwise
+     */
+    public function deregisterInstance(string $instanceName): bool {
+        $instances = $this->getInstanceRegistry();
+        $originalCount = count($instances);
+        
+        // Filter out the instance with the matching container prefix
+        $filteredInstances = array_filter($instances, function($instance) use ($instanceName) {
+            return $instance->containerPrefix !== $instanceName;
+        });
+        
+        if (count($filteredInstances) < $originalCount) {
+            $this->writeInstanceRegistry($filteredInstances);
+            return true;
+        }
+        
+        return false;
+    }
 }

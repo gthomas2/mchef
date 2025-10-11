@@ -1,6 +1,5 @@
 {
     "name": "citricity/mchef",
-    "version": "1.0.0",
     "description": "A docker wrapper enabling Moodle containers to be built from simple recipes",
     "license": "GPL-3.0-only",
     "require": {
