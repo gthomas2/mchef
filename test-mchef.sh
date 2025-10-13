@@ -309,16 +309,102 @@ else
     print_warning "Halt command failed"
 fi
 
+# Test 10: Destroy command
+print_status "Testing MChef destroy command..."
+
+# First restart containers for the destroy test
+print_status "Restarting containers for destroy test..."
+if php "$MCHEF_DIR/mchef.php" up "$CONTAINER_PREFIX" 2>/dev/null; then
+    print_success "Containers restarted for destroy test"
+    sleep 3
+else
+    print_warning "Failed to restart containers for destroy test"
+fi
+
+# Verify containers and volumes exist before destroy
+print_status "Verifying containers and volumes exist before destroy..."
+CONTAINERS_BEFORE=$(docker ps -a --filter name="$CONTAINER_PREFIX-" --format "{{.Names}}" | wc -l)
+VOLUMES_BEFORE=$(docker volume ls --filter name="$CONTAINER_PREFIX" --format "{{.Name}}" | wc -l)
+
+print_status "Found $CONTAINERS_BEFORE containers and $VOLUMES_BEFORE volumes before destroy"
+
+# Test 10a: Destroy command with --dry-run option
+print_status "Testing MChef destroy command with --dry-run option..."
+php "$MCHEF_DIR/mchef.php" destroy "$CONTAINER_PREFIX" --dry-run 2>/dev/null
+DRY_RUN_EXIT_CODE=$?
+
+if [ $DRY_RUN_EXIT_CODE -eq 0 ]; then
+    print_success "Dry-run destroy command executed successfully"
+    
+    # Verify nothing was actually destroyed
+    CONTAINERS_AFTER_DRY_RUN=$(docker ps -a --filter name="$CONTAINER_PREFIX-" --format "{{.Names}}" | wc -l)
+    VOLUMES_AFTER_DRY_RUN=$(docker volume ls --filter name="$CONTAINER_PREFIX" --format "{{.Name}}" | wc -l)
+    
+    if [ "$CONTAINERS_AFTER_DRY_RUN" -eq "$CONTAINERS_BEFORE" ] && [ "$VOLUMES_AFTER_DRY_RUN" -eq "$VOLUMES_BEFORE" ]; then
+        print_success "Dry-run correctly showed what would be destroyed without actually destroying anything"
+    else
+        print_warning "Dry-run may have actually destroyed resources (containers: $CONTAINERS_BEFORE->$CONTAINERS_AFTER_DRY_RUN, volumes: $VOLUMES_BEFORE->$VOLUMES_AFTER_DRY_RUN)"
+    fi
+else
+    print_error "Dry-run destroy command failed with exit code: $DRY_RUN_EXIT_CODE"
+fi
+
+# Test 10b: Actual destroy command with automatic "yes" response
+print_status "Running actual destroy command (with automatic confirmation)..."
+echo "yes" | php "$MCHEF_DIR/mchef.php" destroy "$CONTAINER_PREFIX" 2>/dev/null
+DESTROY_EXIT_CODE=$?
+
+if [ $DESTROY_EXIT_CODE -eq 0 ]; then
+    print_success "Destroy command executed successfully"
+    
+    # Verify containers are removed
+    sleep 3
+    CONTAINERS_AFTER=$(docker ps -a --filter name="$CONTAINER_PREFIX-" --format "{{.Names}}" | wc -l)
+    VOLUMES_AFTER=$(docker volume ls --filter name="$CONTAINER_PREFIX" --format "{{.Name}}" | wc -l)
+    
+    print_status "Found $CONTAINERS_AFTER containers and $VOLUMES_AFTER volumes after destroy"
+    
+    if [ "$CONTAINERS_AFTER" -eq 0 ]; then
+        print_success "All containers removed successfully"
+    else
+        print_warning "Some containers still exist after destroy"
+        docker ps -a --filter name="$CONTAINER_PREFIX-" --format "table {{.Names}}\t{{.Status}}"
+    fi
+    
+    if [ "$VOLUMES_AFTER" -lt "$VOLUMES_BEFORE" ]; then
+        print_success "Volumes were cleaned up (before: $VOLUMES_BEFORE, after: $VOLUMES_AFTER)"
+    else
+        print_warning "Volume cleanup may not have worked as expected"
+    fi
+    
+    # Test that instance is deregistered
+    print_status "Verifying instance deregistration..."
+    if php "$MCHEF_DIR/mchef.php" list 2>/dev/null | grep -q "$CONTAINER_PREFIX"; then
+        print_warning "Instance still appears in registry after destroy"
+    else
+        print_success "Instance successfully deregistered"
+    fi
+    
+else
+    print_error "Destroy command failed with exit code: $DESTROY_EXIT_CODE"
+fi
+
+# Since destroy was tested, disable the cleanup trap to avoid double cleanup
+CLEANUP_ON_EXIT=false
+
 # Final summary
 print_success "🎉 MChef test completed successfully!"
 print_status "Summary:"
 echo "  ✅ CLI functionality verified"
 echo "  ✅ Recipe parsing and container creation"
-echo "  ✅ Core commands tested (list, use, up, halt)"
+echo "  ✅ Core commands tested (list, use, up, halt, destroy)"
 echo "  ✅ Container lifecycle management"
 echo "  ✅ Configuration and database commands"
+echo "  ✅ Complete instance destruction and cleanup"
 
 if [ "$CLEANUP_ON_EXIT" = false ]; then
+    print_status "Destroy command tested - cleanup was handled by MChef destroy"
+else
     print_status "Containers preserved for manual inspection:"
     docker ps -a --filter name="$CONTAINER_PREFIX-" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 fi

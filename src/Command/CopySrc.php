@@ -5,7 +5,6 @@ namespace App\Command;
 use App\Model\Recipe;
 use App\Model\RegistryInstance;
 use App\Service\File;
-use App\Service\Main;
 use App\Service\Plugins;
 use App\Service\Project;
 use App\StaticVars;
