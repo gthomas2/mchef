@@ -664,4 +664,79 @@ class Main extends AbstractService {
     public function getDockerDatabaseContainerName(?string $instanceName = null, ?Recipe $recipe = null) {
         return $this->getDockerContainerName('db', $instanceName, $recipe);
     }
+
+    /**
+     * Prepare Docker data for CI builds (production settings, no volumes).
+     * 
+     * @param Recipe $recipe The recipe to prepare
+     * @return DockerData Prepared docker data for CI
+     */
+    private function prepareDockerDataForCI(Recipe $recipe): DockerData {
+        // Create docker data with no volumes (CI build)
+        $dockerData = new DockerData([], null, ...(array) $recipe);
+        $dockerData->volumes = [];
+        
+        // Add plugin data for dockerfile shallow cloning (if not disabled)
+        if ($recipe->plugins && !$recipe->cloneRepoPlugins) {
+            $pluginsForDocker = [];
+            foreach ($recipe->plugins as $plugin) {
+                $recipePlugin = $this->pluginsService->extractRepoInfoFromPlugin($plugin);
+                
+                // Only include GitHub repositories for cloning
+                if (strpos($recipePlugin->repo, 'https://github.com') === 0 || strpos($recipePlugin->repo, 'git@github.com') === 0) {
+                    // For CI builds, we don't need volume mounts, just the plugin info for shallow cloning
+                    $pluginsForDocker[] = [
+                        'repo' => $recipePlugin->repo,
+                        'branch' => $recipePlugin->branch,
+                        'path' => '/var/www/html' // Default path for CI builds
+                    ];
+                }
+            }
+            $dockerData->pluginsForDocker = $pluginsForDocker;
+        }
+        
+        return $dockerData;
+    }
+
+    /**
+     * Build Docker image for CI/production purposes with custom image name.
+     * 
+     * @param Recipe $recipe The recipe to build
+     * @param string $imageName Custom image name to tag the built image
+     * @throws Exception If build fails
+     */
+    public function buildDockerImage(Recipe $recipe, string $imageName): void {
+        $this->cli->info("Building Docker image: {$imageName}");
+        
+        // Set static vars for template rendering
+        StaticVars::$recipe = $recipe;
+        
+        // Generate temporary project directory for build
+        $buildDir = $this->getChefPath() . '/ci-build-' . uniqid();
+        $dockerDir = $buildDir . '/docker';
+        
+        try {
+            // Create build directory
+            if (!mkdir($dockerDir, 0755, true)) {
+                throw new Exception("Failed to create build directory: {$dockerDir}");
+            }
+            
+            // Prepare docker data for CI build (no volumes, production settings)
+            $dockerData = $this->prepareDockerDataForCI($recipe);
+            
+            // Render docker-compose file for CI build
+            $ymlPath = $dockerDir . '/docker-compose.yml';
+            $dockerComposeFileContents = $this->twig->render('@docker/main.compose.yml.twig', (array) $dockerData);
+            file_put_contents($ymlPath, $dockerComposeFileContents);
+            
+            // Build the image using docker compose
+            $this->dockerService->buildImageWithCompose($ymlPath, $imageName, $dockerDir);
+            
+        } finally {
+            // Clean up build directory
+            if (is_dir($buildDir)) {
+                $this->fileService->deleteDir($buildDir);
+            }
+        }
+    }
 }

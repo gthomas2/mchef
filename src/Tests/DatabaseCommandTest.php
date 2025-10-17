@@ -22,12 +22,10 @@ class DatabaseCommandTest extends MchefTestCase {
     private Configurator $configurator;
     private Main $mainService;
     private Options $options;
-    private $cli;
 
     protected function setUp(): void {
         parent::setUp();
         
-        $this->cli = StaticVars::$cli;
         $this->configurator = $this->createMock(Configurator::class);
         $this->mainService = $this->createMock(Main::class);
         

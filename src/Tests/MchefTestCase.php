@@ -7,12 +7,16 @@ use App\Helpers\Testing;
 use App\Interfaces\SingletonInterface;
 use App\MChefCLI;
 use App\StaticVars;
+use PHPUnit\Framework\MockObject\MockObject;
 
 class MchefTestCase extends \PHPUnit\Framework\TestCase {
+    protected MockObject $cli;
     protected function setUp(): void {
         parent::setUp();
         SplitbrainWrapper::suppressDeprecationWarnings(function() {
-            StaticVars::$cli = $this->createMock(\App\MChefCLI::class);
+            $mockCli = $this->createMock(\App\MChefCLI::class);
+            $this->cli = $mockCli;
+            StaticVars::$cli = $mockCli;
         });
     }
 

@@ -2,24 +2,21 @@
 
 namespace App\Tests;
 
-use App\StaticVars;
 use App\Command\Config;
 use App\Helpers\SplitbrainWrapper;
-use App\MChefCLI;
 use App\Service\Configurator;
-use splitbrain\phpcli\Options;
 use App\Traits\CallRestrictedMethodTrait;
+use splitbrain\phpcli\Options;
+use PHPUnit\Framework\MockObject\MockObject;
 
 class ConfigCommandTest extends MchefTestCase {
     use CallRestrictedMethodTrait;
-    private MChefCLI $cli;
     private Config $configCommand;
-    private Configurator $configurator;
+    private MockObject $configurator;
     private Options $options;
 
     protected function setUp(): void {
         parent::setUp();
-        $this->cli = StaticVars::$cli;
 
         $this->configurator = $this->getMockBuilder(Configurator::class)
             ->disableOriginalConstructor()

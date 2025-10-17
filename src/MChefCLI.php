@@ -209,7 +209,14 @@ class MChefCLI extends CLI {
                     throw new \splitbrain\phpcli\Exception('Invalid command! Command not implemented.');
                 }
             }
-            $class::instance()->execute($options);
+            try {
+                $class::instance()->execute($options);
+            } catch (\App\Exceptions\CliRuntimeException $e) {
+                $this->error($e->getMessage());
+                foreach ($e->getInfo() ?? [] as $infoLine) {
+                    $this->info($infoLine);
+                }
+            }
             return;
         }
 

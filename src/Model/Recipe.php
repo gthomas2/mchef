@@ -179,6 +179,11 @@ class Recipe extends AbstractModel {
          */
         public ?string $adminPassword = null,
 
+        /**
+         * @var string|null - prefix for published Docker image tags (e.g. "my-app" results in "my-app:v1.5.0")
+         */
+        public ?string $publishTagPrefix = null,
+
         // The following properties are set automatically on parse.
 
         public ?string $wwwRoot = null,

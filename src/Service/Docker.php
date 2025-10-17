@@ -283,4 +283,107 @@ class Docker extends AbstractService {
             return false;
         }
     }
+
+    /**
+     * Login to Docker registry using provided credentials.
+     * 
+     * @param array $registryConfig Registry configuration with url, username, password/token
+     * @throws Exception If login fails
+     */
+    public function loginToRegistry(array $registryConfig): void {
+        $url = escapeshellarg($registryConfig['url']);
+        $username = escapeshellarg($registryConfig['username']);
+        
+        if (!empty($registryConfig['token'])) {
+            // Token-based authentication (e.g., GitHub)
+            $token = escapeshellarg($registryConfig['token']);
+            $cmd = "echo {$token} | docker login {$url} --username {$username} --password-stdin";
+        } else {
+            // Password-based authentication
+            $password = escapeshellarg($registryConfig['password']);
+            $cmd = "echo {$password} | docker login {$url} --username {$username} --password-stdin";
+        }
+        
+        $this->exec($cmd, "Failed to login to registry: {$registryConfig['url']}");
+    }
+
+    /**
+     * Tag a Docker image with a new name/tag.
+     * 
+     * @param string $sourceImage Source image name (e.g., "myapp:v1.0.0")
+     * @param string $targetImage Target image name (e.g., "registry.com/myapp:v1.0.0")
+     * @throws Exception If tagging fails
+     */
+    public function tagImage(string $sourceImage, string $targetImage): void {
+        $sourceEscaped = escapeshellarg($sourceImage);
+        $targetEscaped = escapeshellarg($targetImage);
+        
+        $cmd = "docker tag {$sourceEscaped} {$targetEscaped}";
+        $this->exec($cmd, "Failed to tag image: {$sourceImage} -> {$targetImage}");
+    }
+
+    /**
+     * Push a Docker image to registry.
+     * 
+     * @param string $imageName Full image name including registry (e.g., "registry.com/myapp:v1.0.0")
+     * @throws Exception If push fails
+     */
+    public function pushImage(string $imageName): void {
+        $imageEscaped = escapeshellarg($imageName);
+        
+        $cmd = "docker push {$imageEscaped}";
+        $this->exec($cmd, "Failed to push image: {$imageName}");
+    }
+
+    /**
+     * Build Docker image with custom name using docker compose.
+     * 
+     * @param string $composeFile Path to docker-compose.yml file
+     * @param string $imageName Custom image name to build as
+     * @param string $projectDir Project directory for docker compose
+     * @throws Exception If build fails
+     */
+    public function buildImageWithCompose(string $composeFile, string $imageName, string $projectDir): void {
+        $composeFileEscaped = escapeshellarg($composeFile);
+        $projectDirEscaped = escapeshellarg($projectDir);
+        
+        // Build using docker compose but don't start containers
+        $cmd = "docker compose --project-directory {$projectDirEscaped} -f {$composeFileEscaped} build";
+        $this->exec($cmd, "Failed to build image with docker compose");
+        
+        // Get the built image name from compose and tag it with our custom name
+        // This is a bit tricky - we need to inspect what compose built and rename it
+        // For now, we'll assume the main service in compose is called 'moodle'
+        $serviceName = $this->extractServiceNameFromCompose($composeFile);
+        $builtImageName = $this->getComposeImageName($projectDir, $serviceName);
+        
+        if ($builtImageName !== $imageName) {
+            $this->tagImage($builtImageName, $imageName);
+        }
+    }
+
+    /**
+     * Extract the main service name from docker-compose file.
+     * 
+     * @param string $composeFile Path to compose file
+     * @return string Service name (defaults to 'moodle')
+     */
+    private function extractServiceNameFromCompose(string $composeFile): string {
+        // For MChef, the main service is typically 'moodle'
+        // In a more robust implementation, we'd parse the YAML
+        return 'moodle';
+    }
+
+    /**
+     * Get the image name that docker compose would generate.
+     * 
+     * @param string $projectDir Project directory
+     * @param string $serviceName Service name
+     * @return string Generated image name
+     */
+    private function getComposeImageName(string $projectDir, string $serviceName): string {
+        // Docker compose generates image names like: {project}_{service}
+        $projectName = basename($projectDir);
+        return "{$projectName}_{$serviceName}";
+    }
 }
