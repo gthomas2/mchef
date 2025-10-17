@@ -100,7 +100,7 @@ jobs:
           "plugins": [
             {
               "repo": "https://github.com/marcusgreen/moodle-qtype_gapfill.git",
-              "branch": "master"
+              "branch": "main"
             }
           ],
           "containerPrefix": "ci-test",

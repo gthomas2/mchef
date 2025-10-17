@@ -71,7 +71,7 @@ The workflow uses an optimized test recipe designed for CI efficiency:
   "plugins": [
     {
       "repo": "https://github.com/marcusgreen/moodle-qtype_gapfill.git",
-      "branch": "master"
+      "branch": "main"
     }
   ],
   "containerPrefix": "ci-test",
@@ -166,7 +166,7 @@ The local script provides the same functionality as the GitHub workflow with add
   "plugins": [
     {
       "repo": "https://github.com/marcusgreen/moodle-qtype_gapfill.git",
-      "branch": "master"
+      "branch": "main"
     }
   ],
   "containerPrefix": "ci-test",
