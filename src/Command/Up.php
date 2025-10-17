@@ -2,6 +2,7 @@
 
 namespace App\Command;
 
+use App\Exceptions\CliRuntimeException;
 use App\Service\Configurator;
 use App\Service\ProxyService;
 use App\StaticVars;
@@ -30,10 +31,10 @@ class Up extends AbstractCommand {
         $containerPrefix = $instance->containerPrefix;
 
         if (empty($containerPrefix)) {
-            $this->cli->error('Please provide a container prefix name or set an active instance via the use command.');
-            $this->cli->info('Usage: mchef up <container-prefix>');
-            $this->cli->info('Example: mchef up ally');
-            exit(1);
+            throw new CliRuntimeException('Container prefix is required to start containers.', 0, null, [
+                'Usage: mchef up <container-prefix>',
+                'Example: mchef up ally'
+            ]);
         }
 
         // Check if this instance is different from the currently active instance
@@ -48,8 +49,7 @@ class Up extends AbstractCommand {
         $existingContainers = $this->getExistingContainers([$moodleContainer, $dbContainer]);
 
         if (empty($existingContainers)) {
-            $this->showMissingContainersError($containerPrefix);
-            exit(1);
+            $this->throwMissingContainersError($containerPrefix);
         }
 
         // Check if all expected containers exist
@@ -63,8 +63,7 @@ class Up extends AbstractCommand {
 
         if (!empty($missingContainers)) {
             $this->cli->error("Missing containers: " . implode(', ', $missingContainers));
-            $this->showMissingContainersError($containerPrefix);
-            exit(1);
+            $this->throwMissingContainersError($containerPrefix);
         }
 
         // Start the containers
@@ -89,9 +88,7 @@ class Up extends AbstractCommand {
         }
     }
 
-    private function showMissingContainersError(string $containerPrefix): void {
-        $this->cli->error("Missing containers for prefix: $containerPrefix");
-
+    private function throwMissingContainersError(string $containerPrefix): void {
         // Try to find the project directory from registry for helpful error message
         $instances = $this->configuratorService->getInstanceRegistry();
         $foundInstance = null;
@@ -103,16 +100,19 @@ class Up extends AbstractCommand {
             }
         }
 
+        $info = [];
         if ($foundInstance) {
             $projectDir = dirname($foundInstance->recipePath);
             $recipeFile = basename($foundInstance->recipePath);
-            $this->cli->info("You must re-run mchef in the project directory for this recipe:");
-            $this->cli->info("  cd $projectDir");
-            $this->cli->info("  mchef $recipeFile");
+            $info[] = "You must re-run mchef in the project directory for this recipe:";
+            $info[] = "  cd $projectDir";
+            $info[] = "  mchef $recipeFile";
         } else {
-            $this->cli->info("You need to reinitialize by running mchef <recipe-file.json> in the project directory.");
+            $info[] = "You need to reinitialize by running mchef <recipe-file.json> in the project directory.";
         }
-    }
+
+        throw new CliRuntimeException("Missing containers for prefix: $containerPrefix", 0, null, $info);
+    }    
 
     private function getExistingContainers(array $expectedContainers): array {
         $existing = [];

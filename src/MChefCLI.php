@@ -213,9 +213,10 @@ class MChefCLI extends CLI {
                 $class::instance()->execute($options);
             } catch (\App\Exceptions\CliRuntimeException $e) {
                 $this->error($e->getMessage());
-                foreach ($e->getInfo() ?? [] as $infoLine) {
+                foreach ($e->getInfo() as $infoLine) {
                     $this->info($infoLine);
                 }
+                exit(1);
             }
             return;
         }

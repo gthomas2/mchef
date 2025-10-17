@@ -2,6 +2,7 @@
 
 namespace App\Command;
 
+use App\Exceptions\CliRuntimeException;
 use App\Service\Configurator;
 use App\Service\Docker;
 use App\StaticVars;
@@ -32,15 +33,16 @@ final class Halt extends AbstractCommand {
             return;
         }
 
-        $this->cli->error('An instance has not been selected / You are not in a project directory and no container prefix was specified.');
-        $this->cli->info('Usage:');
-        $this->cli->info('  mchef halt <container-prefix>  - Stop containers by prefix');
-        $this->cli->info('  mchef halt                     - Stop containers for current project (run from project directory)');
-        $this->cli->info('');
-        $this->cli->info('Examples:');
-        $this->cli->info('  mchef halt ally               - Stop ally-moodle, ally-db containers');
-        $this->cli->info('  cd /path/to/project && mchef halt - Stop containers for the project in current directory');
-        exit(1);
+        $info = [
+            'Usage:',
+            '  mchef halt <container-prefix>  - Stop containers by prefix',
+            '  mchef halt                     - Stop containers for current project (run from project directory)',
+            '',
+            'Examples:',
+            '  mchef halt ally               - Stop ally-moodle, ally-db containers',
+            '  cd /path/to/project && mchef halt - Stop containers for the project in current directory'
+        ];
+        throw new CliRuntimeException("An instance has not been selected / You are not in a project directory and no container prefix was specified.", 0, null, $info);
     }
 
     private function haltContainersByPrefix(string $containerPrefix): void {

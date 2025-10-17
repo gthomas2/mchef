@@ -66,8 +66,7 @@ class CI extends AbstractCommand {
             $this->publishImage($imageName, $publishTag);
             
         } catch (Exception $e) {
-            $this->cli->error('CI build failed: ' . $e->getMessage());
-            exit(1);
+            throw new CliRuntimeException('CI build failed: ' . $e->getMessage());
         }
     }
 
