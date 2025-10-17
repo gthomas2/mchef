@@ -110,12 +110,8 @@ class Database extends AbstractCommand {
     }
 
     public function execute(Options $options): void {
-        try {
-            $this->setStaticVarsFromOptions($options);
-        } catch (\RuntimeException $e) {
-            $this->cli->error($e->getMessage());
-            exit(1);
-        }
+        $this->setStaticVarsFromOptions($options);
+
         $this->instance = StaticVars::$instance;
         $this->recipe = $this->mainService->getRecipe($this->instance->recipePath);
         $this->database = $this->resolveDatabase();

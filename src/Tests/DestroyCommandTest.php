@@ -19,7 +19,6 @@ class DestroyCommandTest extends MchefTestCase {
 
     private Destroy $destroyCommand;
     private $options;
-    private $cli;
     private $configurator;
     private $docker;
     private $main;
@@ -35,7 +34,6 @@ class DestroyCommandTest extends MchefTestCase {
         $this->options = $this->createMock(Options::class);
         
         // Create service mocks
-        $this->cli = $this->createMock(MChefCLI::class);
         $this->configurator = $this->createMock(Configurator::class);
         $this->docker = $this->createMock(Docker::class);
         $this->main = $this->getMockBuilder(Main::class)

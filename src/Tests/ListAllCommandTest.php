@@ -15,7 +15,7 @@ use splitbrain\phpcli\Options;
 
 class ListAllCommandTest extends MchefTestCase {
     public function testListAllShowsSelectedInstance() {
-        $cli = $this->createMock(MChefCLI::class);
+        $cli = $this->cli;
         $cli->method('warning')->willReturnCallback(function($msg) { echo $msg . "\n"; });
         $cli->method('info')->willReturnCallback(function($msg) { echo $msg . "\n"; });
 
@@ -60,7 +60,7 @@ class ListAllCommandTest extends MchefTestCase {
     }
 
     public function testListAllHandlesMissingRecipe() {
-        $cli = $this->createMock(MChefCLI::class);
+        $cli = $this->cli;
         $cli->method('warning')->willReturnCallback(function($msg) { echo $msg . "\n"; });
         $configurator = $this->createMock(Configurator::class);
         $main = $this->createMock(Main::class);
@@ -95,7 +95,7 @@ class ListAllCommandTest extends MchefTestCase {
     }
 
     public function testListAllWithNoInstances() {
-        $cli = $this->createMock(MChefCLI::class);
+        $cli = $this->cli;
         $cli->method('info')->willReturnCallback(function($msg) { echo $msg . "\n"; });
         $configurator = $this->createMock(Configurator::class);
         $main = $this->createMock(Main::class);
@@ -120,7 +120,7 @@ class ListAllCommandTest extends MchefTestCase {
     }
 
     public function testListAllWithAllInactiveInstances() {
-        $cli = $this->createMock(MChefCLI::class);
+        $cli = $this->cli;
         $cli->method('info')->willReturnCallback(function($msg) { echo $msg . "\n"; });
         $configurator = $this->createMock(Configurator::class);
         $main = $this->createMock(Main::class);
@@ -154,7 +154,7 @@ class ListAllCommandTest extends MchefTestCase {
     }
 
     public function testListAllWithSelectedInactiveInstance() {
-        $cli = $this->createMock(MChefCLI::class);
+        $cli = $this->cli;
         $cli->method('info')->willReturnCallback(function($msg) { echo $msg . "\n"; });
         $configurator = $this->createMock(Configurator::class);
         $main = $this->createMock(Main::class);

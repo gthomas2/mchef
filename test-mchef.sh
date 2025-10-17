@@ -165,7 +165,7 @@ else
   "phpVersion": "8.0",
   "plugins": [
     {
-      "repo": "https://github.com/marcusgreen/moodle-qtype_gapfill.git",
+      "repo": "https://github.com/gthomas2/moodle-filter_imageopt",
       "branch": "master"
     }
   ],

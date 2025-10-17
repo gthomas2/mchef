@@ -2,6 +2,7 @@
 
 namespace App\Command;
 
+use App\Exceptions\CliRuntimeException;
 use App\Service\Docker;
 use App\Service\File;
 use App\StaticVars;
@@ -30,11 +31,11 @@ class Destroy extends AbstractCommand {
         $args = $options->getArgs();
         
         if (empty($args) || empty($args[0])) {
-            $this->cli->error('Instance name is required.');
-            $this->cli->info('Usage: mchef destroy <instance-name> [--dry-run]');
-            $this->cli->info('Example: mchef destroy my-project');
-            $this->cli->info('Example: mchef destroy my-project --dry-run');
-            exit(1);
+            throw new CliRuntimeException('Instance name is required.', 0, null, [
+                'Usage: mchef destroy <instance-name> [--dry-run]',
+                'Example: mchef destroy my-project',
+                'Example: mchef destroy my-project --dry-run'
+            ]);
         }
 
         // Use the standard pattern like other commands, but provide helpful error messages
@@ -49,20 +50,23 @@ class Destroy extends AbstractCommand {
             
             if (!$registeredInstance) {
                 $this->cli->error("Instance '$instanceName' is not registered.");
-                $this->cli->info("Available instances:");
+                $info = [
+                    "Available instances:"
+                ];
                 $instances = $this->configuratorService->getInstanceRegistry();
                 if (empty($instances)) {
-                    $this->cli->info("  No instances found.");
+                    $info[] = "  No instances found.";
                 } else {
                     foreach ($instances as $instance) {
-                        $this->cli->info("  - {$instance->containerPrefix}");
+                        $info[] = "  - {$instance->containerPrefix}";
                     }
                 }
+                throw new CliRuntimeException("Instance '$instanceName' is not registered.", 0, null, $info);
+
             } else {
                 // Re-throw if it's a different error (like validation)
-                $this->cli->error($e->getMessage());
+                throw new CliRuntimeException($e->getMessage(), 0, $e);
             }
-            exit(1);
         }
 
         // Check if this is a dry run
